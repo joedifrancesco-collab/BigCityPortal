@@ -14,6 +14,14 @@ const DEFAULTS = {
   weather: { name: 'New York', lat: 40.71, lon: -74.01, unit: 'fahrenheit' },
   feeds: [{ title: 'BBC News', url: 'https://feeds.bbci.co.uk/news/rss.xml' }],
   notes: '',
+  quicklaunch: [
+    { type: 'web', title: 'Gmail', url: 'https://mail.google.com' },
+    { type: 'web', title: 'Calendar', url: 'https://calendar.google.com' },
+    { type: 'web', title: 'Drive', url: 'https://drive.google.com' },
+    { type: 'web', title: 'Outlook', url: 'https://outlook.office.com' },
+    { type: 'app', id: 'calculator' },
+    { type: 'app', id: 'notepad' },
+  ],
   order: ['bookmarks', 'weather', 'rss', 'notes'],
 };
 

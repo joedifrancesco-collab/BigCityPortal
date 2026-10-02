@@ -3,6 +3,7 @@ import { bookmarks } from './widgets/bookmarks.js';
 import { weather } from './widgets/weather.js';
 import { rss } from './widgets/rss.js';
 import { notes } from './widgets/notes.js';
+import { quicklaunch } from './widgets/quicklaunch.js';
 
 const config = await loadConfig();
 
@@ -31,6 +32,8 @@ document.getElementById('search').onsubmit = e => {
   const q = document.getElementById('q').value.trim();
   if (q) window.open(config.engines[engine.value] + encodeURIComponent(q), '_blank', 'noopener');
 };
+
+quicklaunch(document.getElementById('quicklaunch'), config, saveConfig);
 
 const WIDGETS = { bookmarks, weather, rss, notes };
 const container = document.getElementById('widgets');

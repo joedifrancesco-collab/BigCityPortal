@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const dns = require('dns').promises;
 const net = require('net');
+const { spawn } = require('child_process');
 
 const PORT = Number(process.env.BCP_PORT) || 3000;
 const HOST = '127.0.0.1';
@@ -13,6 +14,15 @@ const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.svg': 'image/svg+xml',
   '.png': 'image/png', '.ico': 'image/x-icon',
+};
+// Only these fixed apps can be launched; the client sends an id, never a command.
+const APPS = {
+  calculator: { label: 'Calculator', icon: '🧮', exe: 'calc.exe' },
+  notepad: { label: 'Notepad', icon: '📝', exe: 'notepad.exe' },
+  paint: { label: 'Paint', icon: '🎨', exe: 'mspaint.exe' },
+  snip: { label: 'Snipping Tool', icon: '✂️', exe: 'snippingtool.exe' },
+  explorer: { label: 'File Explorer', icon: '📁', exe: 'explorer.exe' },
+  taskmgr: { label: 'Task Manager', icon: '📊', exe: 'taskmgr.exe' },
 };
 const feedCache = new Map();
 const CACHE_MS = 10 * 60 * 1000;
@@ -64,6 +74,23 @@ const server = http.createServer(async (req, res) => {
       const origin = req.headers.origin;
       if (origin && origin !== `http://localhost:${PORT}` && origin !== `http://${HOST}:${PORT}`) return send(res, 403, '{"error":"Forbidden"}');
 
+      // Reject DNS-rebinding attempts: the Host must be our own
+      if (![`localhost:${PORT}`, `${HOST}:${PORT}`].includes(req.headers.host)) return send(res, 403, '{"error":"Forbidden"}');
+
+      if (url.pathname === '/api/apps' && req.method === 'GET') {
+        const list = process.platform === 'win32'
+          ? Object.entries(APPS).map(([id, a]) => ({ id, label: a.label, icon: a.icon })) : [];
+        return send(res, 200, JSON.stringify(list));
+      }
+      if (url.pathname === '/api/launch' && req.method === 'POST') {
+        const { id } = JSON.parse(await readBody(req, 1000));
+        const app = Object.hasOwn(APPS, id) && process.platform === 'win32' ? APPS[id] : null;
+        if (!app) return send(res, 400, '{"error":"Unknown app"}');
+        const child = spawn(app.exe, [], { detached: true, stdio: 'ignore' });
+        child.on('error', () => {});
+        child.unref();
+        return send(res, 200, '{"ok":true}');
+      }
       if (url.pathname === '/api/rss' && req.method === 'GET') {
         const target = url.searchParams.get('url');
         if (!target) return send(res, 400, '{"error":"Missing url"}');

@@ -4,6 +4,7 @@ A personal homepage, in the spirit of iGoogle. It runs locally, with no third-pa
 
 ## Features
 
+- Quick launch tiles for web apps (any URL) and a fixed set of Windows apps (Calculator, Notepad, Paint, Snipping Tool, File Explorer, Task Manager); click Edit to add or remove
 - Search bar (Google, Bing, DuckDuckGo)
 - Bookmarks, with import from Chrome/Edge (Bookmarks manager -> ... -> Export bookmarks, then click Import)
 - Drag widgets by their title to reorder them (order is saved)
@@ -33,6 +34,7 @@ Set `BCP_PORT` to use a different port.
 - `server.js` serves `public/`, proxies RSS feeds at `/api/rss` (browsers block most direct feed requests), and stores settings at `/api/config`.
 - Settings are saved to `data/config.json`, which is git-ignored. Keep the project in OneDrive to sync it between computers.
 - The server listens on `127.0.0.1` only. It rejects RSS requests to private addresses and API calls from other origins.
+- Windows apps are launched through POST /api/launch using ids from a fixed allowlist in server.js (the browser never sends a command). To offer another app, add it to APPS there.
 
 ## Project layout
 
@@ -47,4 +49,5 @@ data/                saved settings (git-ignored)
 ## License
 
 Apache 2.0, see [LICENSE](LICENSE).
+
 
