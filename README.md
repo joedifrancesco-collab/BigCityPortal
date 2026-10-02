@@ -5,7 +5,8 @@ A personal homepage, in the spirit of iGoogle. It runs locally, with no third-pa
 ## Features
 
 - Search bar (Google, Bing, DuckDuckGo)
-- Bookmarks
+- Bookmarks, with import from Chrome/Edge (Bookmarks manager -> ... -> Export bookmarks, then click Import)
+- Drag widgets by their title to reorder them (order is saved)
 - Weather and 5-day forecast ([Open-Meteo](https://open-meteo.com/), no API key)
 - RSS feeds
 - Notes
@@ -46,3 +47,4 @@ data/                saved settings (git-ignored)
 ## License
 
 Apache 2.0, see [LICENSE](LICENSE).
+

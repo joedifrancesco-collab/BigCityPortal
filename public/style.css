@@ -21,3 +21,7 @@ main { max-width:1300px; margin:0 auto; padding:0 1.5rem 2rem; }
 .row { display:flex; gap:.4rem; margin-top:.6rem; } .row input { flex:1; min-width:0; }
 textarea { width:100%; min-height:140px; font:inherit; color:var(--text); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:.5rem; resize:vertical; }
 .x { background:none; border:none; color:var(--muted); padding:0 .3rem; }
+.widget > h2 { cursor: grab; user-select: none; }
+.widget.dragging { opacity: .4; }
+details { margin-top:.4rem; } summary { cursor:pointer; font-size:.9rem; padding:.2rem 0; }
+details ul { padding-left:.8rem; }

@@ -32,10 +32,50 @@ document.getElementById('search').onsubmit = e => {
   if (q) location.href = config.engines[engine.value] + encodeURIComponent(q);
 };
 
+const WIDGETS = { bookmarks, weather, rss, notes };
 const container = document.getElementById('widgets');
-for (const widget of [bookmarks, weather, rss, notes]) {
+
+// Saved order first, then any widgets missing from it
+const order = [...config.order.filter(id => id in WIDGETS), ...Object.keys(WIDGETS).filter(id => !config.order.includes(id))];
+for (const id of order) {
   const el = document.createElement('section');
   el.className = 'widget';
+  el.dataset.id = id;
   container.append(el);
-  widget(el, getConfig(), saveConfig);
+  WIDGETS[id](el, getConfig(), saveConfig);
 }
+
+// Drag a widget by its title to reorder. Draggable is enabled only while the title is pressed,
+// so text selection in inputs and notes still works.
+let dragging = null;
+container.addEventListener('pointerdown', e => {
+  const handle = e.target.closest('.widget > h2');
+  if (handle) handle.parentElement.draggable = true;
+});
+container.addEventListener('dragstart', e => {
+  dragging = e.target.closest('.widget');
+  if (!dragging) return;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', dragging.dataset.id);
+  requestAnimationFrame(() => dragging.classList.add('dragging'));
+});
+container.addEventListener('dragover', e => {
+  if (!dragging) return;
+  e.preventDefault();
+  const target = e.target.closest('.widget');
+  if (!target || target === dragging) return;
+  const r = target.getBoundingClientRect();
+  const d = dragging.getBoundingClientRect();
+  const sameRow = d.top < r.bottom && d.bottom > r.top;
+  const before = sameRow ? e.clientX < r.left + r.width / 2 : e.clientY < r.top + r.height / 2;
+  container.insertBefore(dragging, before ? target : target.nextSibling);
+});
+container.addEventListener('dragend', () => {
+  if (!dragging) return;
+  dragging.classList.remove('dragging');
+  dragging.draggable = false;
+  dragging = null;
+  config.order = [...container.children].map(el => el.dataset.id);
+  saveConfig();
+});
+container.addEventListener('pointerup', () => container.querySelectorAll('.widget[draggable="true"]').forEach(el => { if (!dragging) el.draggable = false; }));

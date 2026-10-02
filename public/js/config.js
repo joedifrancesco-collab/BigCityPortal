@@ -14,6 +14,7 @@ const DEFAULTS = {
   weather: { name: 'New York', lat: 40.71, lon: -74.01, unit: 'fahrenheit' },
   feeds: [{ title: 'BBC News', url: 'https://feeds.bbci.co.uk/news/rss.xml' }],
   notes: '',
+  order: ['bookmarks', 'weather', 'rss', 'notes'],
 };
 
 let config = structuredClone(DEFAULTS);
