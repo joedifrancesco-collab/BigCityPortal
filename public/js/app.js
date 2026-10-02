@@ -29,7 +29,7 @@ engine.onchange = () => { config.engine = engine.value; saveConfig(); };
 document.getElementById('search').onsubmit = e => {
   e.preventDefault();
   const q = document.getElementById('q').value.trim();
-  if (q) location.href = config.engines[engine.value] + encodeURIComponent(q);
+  if (q) window.open(config.engines[engine.value] + encodeURIComponent(q), '_blank', 'noopener');
 };
 
 const WIDGETS = { bookmarks, weather, rss, notes };

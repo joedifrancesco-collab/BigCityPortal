@@ -21,7 +21,7 @@ export function bookmarks(root, config, save) {
   let message = '';
 
   const item = (b, i) => h('li', {},
-    h('a', { href: safeUrl(b.url) }, b.title),
+    h('a', { href: safeUrl(b.url), target: '_blank', rel: 'noopener' }, b.title),
     h('button', { class: 'x', title: 'Remove', onclick: () => { config.bookmarks.splice(i, 1); save(); render(); } }, '✕'));
 
   const importFile = async file => {
