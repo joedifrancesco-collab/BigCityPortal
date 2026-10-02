@@ -37,3 +37,6 @@ span.ql-icon { padding:0; }
 .ql-edit-btn { align-self:center; margin-left:.5rem; font-size:.8rem; }
 .ql-edit { max-width:640px; }
 [hidden] { display:none !important; }
+.feed { border-top:1px solid var(--border); padding:.3rem 0; }
+.feed summary { display:flex; justify-content:space-between; align-items:center; cursor:pointer; font-size:.9rem; font-weight:600; padding:.2rem 0; }
+.feed ul { margin-top:.3rem; }

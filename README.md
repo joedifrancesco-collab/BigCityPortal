@@ -9,7 +9,7 @@ A personal homepage, in the spirit of iGoogle. It runs locally, with no third-pa
 - Bookmarks, with import from Chrome/Edge (Bookmarks manager -> ... -> Export bookmarks, then click Import)
 - Drag widgets by their title to reorder them (order is saved)
 - Weather and 5-day forecast ([Open-Meteo](https://open-meteo.com/), no API key)
-- RSS feeds
+- RSS feeds, each collapsible (collapsed state is remembered, and collapsed feeds are not fetched until opened)
 - Notes
 - Light/dark theme
 
@@ -49,5 +49,6 @@ data/                saved settings (git-ignored)
 ## License
 
 Apache 2.0, see [LICENSE](LICENSE).
+
 
 

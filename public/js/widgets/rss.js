@@ -13,12 +13,27 @@ export function rss(root, config, save) {
   const render = () => {
     const parts = [h('h2', {}, 'RSS Feeds')];
     config.feeds.forEach((f, i) => {
-      const list = h('ul', {}, h('li', { class: 'muted' }, 'Loading…'));
-      parts.push(
-        h('h3', { class: 'muted' }, f.title, h('button', { class: 'x', title: 'Remove feed', onclick: () => { config.feeds.splice(i, 1); save(); render(); } }, '✕')),
-        list);
-      loadFeed(f.url).then(items => list.replaceChildren(...items.map(it => h('li', {}, h('a', { href: safeUrl(it.link), target: '_blank', rel: 'noopener' }, it.title)))))
-        .catch(() => list.replaceChildren(h('li', { class: 'muted' }, 'Could not load feed')));
+      const list = h('ul', {});
+      let loaded = false;
+      const load = () => {
+        if (loaded) return;
+        loaded = true;
+        list.replaceChildren(h('li', { class: 'muted' }, 'Loading…'));
+        loadFeed(f.url).then(items => list.replaceChildren(...items.map(it => h('li', {}, h('a', { href: safeUrl(it.link), target: '_blank', rel: 'noopener' }, it.title)))))
+          .catch(() => { loaded = false; list.replaceChildren(h('li', { class: 'muted' }, 'Could not load feed')); });
+      };
+      const remove = h('button', { class: 'x', title: 'Remove feed', onclick: e => {
+        e.preventDefault(); e.stopPropagation();
+        config.feeds.splice(i, 1); save(); render();
+      } }, '✕');
+      const d = h('details', { class: 'feed' }, h('summary', {}, h('span', {}, f.title), remove), list);
+      d.open = !f.collapsed;
+      d.addEventListener('toggle', () => {
+        if (d.open) load();
+        if (!!f.collapsed === d.open) { f.collapsed = !d.open; save(); }
+      });
+      if (d.open) load();
+      parts.push(d);
     });
     const title = h('input', { placeholder: 'Title' });
     const url = h('input', { placeholder: 'Feed URL' });
