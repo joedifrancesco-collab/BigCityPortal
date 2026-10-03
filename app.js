@@ -595,7 +595,7 @@
       date.textContent = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
       toggle.textContent = config.clock24 ? '24h' : '12h';
     };
-    root.replaceChildren(h('h2', {}, 'Clock', toggle), time, date);
+    root.replaceChildren(h('h2', {}, titleLink('Clock', 'https://time.is'), toggle), time, date);
     tick();
     setInterval(tick, 1000);
   }
