@@ -195,23 +195,29 @@
 
   // ---------- bookmarks (folders, with Chrome/Edge HTML import) ----------
   // Parses a Chrome/Edge "Export bookmarks" HTML file (Netscape format) into [{ path: [...folders], node }] in file order.
-  // The toolbar/unfiled root wrappers ("Bookmarks bar", "Favorites bar", "Other bookmarks") are flattened away.
+  // Root folders ("Bookmarks bar", "Favorites bar", "Other bookmarks") are kept; items outside any root go under "Other bookmarks".
   function parseBookmarkFile(html) {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const isRoot = h3 => h3.hasAttribute('personal_toolbar_folder') || h3.hasAttribute('unfiled_bookmarks_folder');
     const pathOf = el => {
       const path = [];
+      let rooted = false;
       for (let dl = el.closest('dl'); dl; dl = dl.parentElement?.closest('dl')) {
         const head = dl.previousElementSibling;
-        if (head?.tagName === 'H3' && !isRoot(head) && head.textContent.trim()) path.unshift(head.textContent.trim());
+        if (head?.tagName === 'H3' && head.textContent.trim()) {
+          path.unshift(head.textContent.trim());
+          if (isRoot(head)) rooted = true;
+        }
       }
-      return path;
+      return rooted ? path : ['Other bookmarks', ...path];
     };
     const found = [];
     for (const el of doc.querySelectorAll('h3, a[href]')) {
       if (el.tagName === 'H3') {
         const name = el.textContent.trim();
-        if (name && !isRoot(el)) found.push({ path: [...pathOf(el), name], node: null });
+        if (!name) continue;
+        const parent = pathOf(el);
+        found.push({ path: isRoot(el) ? [name] : [...parent, name], node: null });
         continue;
       }
       const url = el.getAttribute('href').trim();
