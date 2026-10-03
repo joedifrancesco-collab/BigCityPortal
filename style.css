@@ -76,3 +76,5 @@ span.ql-icon { padding:0; }
 .team.win { font-weight:700; }
 .game.live .game-status { color:#e5484d; font-weight:600; }
 .game-status { font-size:.8rem; }
+.stock-id { min-width:0; }
+.stock-name { font-size:.78rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }

@@ -36,7 +36,7 @@
       { title: 'NBC News', url: 'https://feeds.nbcnews.com/nbcnews/public/news' },
     ],
     clock24: false,
-    stocks: { key: '', symbols: ['AAPL', 'MSFT', 'GOOGL', 'AMZN'] },
+    stocks: { key: '', symbols: ['AAPL', 'MSFT', 'GOOGL', 'AMZN'], names: {} },
     sports: { league: 'nfl' },
     columns: [['notes', 'weather'], ['bookmarks'], ['calendar']],
   };
@@ -116,8 +116,9 @@
     if (typeof raw.clock24 === 'boolean') c.clock24 = raw.clock24;
     const s = raw.stocks;
     if (s && Array.isArray(s.symbols)) {
-      c.stocks = { key: str(s.key) ? s.key.slice(0, 100) : '', symbols: [...new Set(s.symbols.filter(x => str(x) && /^[A-Z0-9.\-]{1,10}$/.test(x)))].slice(0, 20) };
-    }
+      c.stocks = { key: str(s.key) ? s.key.slice(0, 100) : '', symbols: [...new Set(s.symbols.filter(x => str(x) && /^[A-Z0-9.\-]{1,10}$/.test(x)))]      .slice(0, 20), names: {} };
+            if (s.names && typeof s.names === 'object') for (const k of c.stocks.symbols) if (str(s.names[k])) c.stocks.names[k] = s.names[k].slice(0, 80);
+          }
     if (raw.sports && LEAGUE_IDS.includes(raw.sports.league)) c.sports = { league: raw.sports.league };
     if (Array.isArray(raw.columns) && raw.columns.length) {
       c.columns = raw.columns.slice(0, COLUMNS).map(col => Array.isArray(col) ? col.filter(str) : []);
@@ -458,10 +459,23 @@
     const quotes = new Map(); // symbol -> { c, d, dp } | { error }
     let editing = false, loaded = false;
 
+    // Finnhub's free plan has no index symbols, so indexes are shown through the ETFs that track them
+    const FIXED = { SPY: 'S&P 500 (SPDR ETF)', ONEQ: 'Nasdaq Composite (Fidelity ETF)', QQQ: 'Nasdaq-100 (Invesco ETF)', DIA: 'Dow Jones Industrial Average (SPDR ETF)' };
+    const nameOf = sym => FIXED[sym] || config.stocks.names[sym] || '';
+    const lookupName = async sym => {
+      if (nameOf(sym)) return;
+      try {
+        const r = await fetch(`https://finnhub.io/api/v1/search?q=${encodeURIComponent(sym)}&token=${encodeURIComponent(config.stocks.key)}`);
+        const m = (await r.json()).result?.find(x => x.symbol === sym);
+        if (m?.description) { config.stocks.names[sym] = plain(m.description).slice(0, 80); save(); }
+      } catch { /* the name is optional */ }
+    };
+
     const load = async () => {
       loaded = true;
       if (!config.stocks.key) return;
       await Promise.all(config.stocks.symbols.map(async sym => {
+        lookupName(sym).then(render);
         try {
           const r = await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(sym)}&token=${encodeURIComponent(config.stocks.key)}`);
           if (!r.ok) throw new Error(r.status);
@@ -486,7 +500,7 @@
       const x = h('button', { class: 'x', title: 'Remove', onclick: () => {
         config.stocks.symbols = config.stocks.symbols.filter(s => s !== sym); quotes.delete(sym); save(); render();
       } }, '\u2715');
-      return h('li', { class: 'stock-row' }, h('strong', {}, sym), val, editing ? x : null);
+      return h('li', { class: 'stock-row' }, h('div', { class: 'stock-id' }, h('strong', {}, sym), nameOf(sym) ? h('div', { class: 'muted stock-name', title: nameOf(sym) }, nameOf(sym)) : null), val, editing ? x : null);
     };
 
     const render = () => {
