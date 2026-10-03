@@ -2,6 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'bcp-config';
+  const COLUMNS = 3;
   const DEFAULTS = {
     theme: 'dark',
     engine: 'Google',
@@ -23,7 +24,7 @@
     ],
     weather: { name: 'New York', lat: 40.71, lon: -74.01, unit: 'fahrenheit' },
     notes: '',
-    order: ['bookmarks', 'weather', 'calendar', 'notes'],
+    columns: [['notes', 'weather'], ['bookmarks'], ['calendar']],
   };
 
   // ---------- helpers ----------
@@ -97,7 +98,13 @@
       c.weather = { name: w.name, lat: w.lat, lon: w.lon, unit: w.unit === 'celsius' ? 'celsius' : 'fahrenheit' };
     }
     if (str(raw.notes)) c.notes = raw.notes;
-    if (Array.isArray(raw.order)) c.order = raw.order.filter(str);
+    if (Array.isArray(raw.columns) && raw.columns.length) {
+      c.columns = raw.columns.slice(0, COLUMNS).map(col => Array.isArray(col) ? col.filter(str) : []);
+      while (c.columns.length < COLUMNS) c.columns.push([]);
+    } else if (Array.isArray(raw.order)) { // older single-list layout: deal widgets across the columns
+      c.columns = Array.from({ length: COLUMNS }, () => []);
+      raw.order.filter(str).forEach((id, i) => c.columns[i % COLUMNS].push(id));
+    }
     return c;
   }
 
@@ -389,23 +396,31 @@
     render();
   }
 
-  // ---------- widget grid with drag-to-reorder ----------
+  // ---------- widget columns with drag between and within columns ----------
   quicklaunch(document.getElementById('quicklaunch'));
 
   const WIDGETS = { bookmarks, weather, notes, calendar };
   const container = document.getElementById('widgets');
-  // Saved order first, then any widgets missing from it
-  const order = [...config.order.filter(id => id in WIDGETS), ...Object.keys(WIDGETS).filter(id => !config.order.includes(id))];
-  for (const id of order) {
+  const cols = Array.from({ length: COLUMNS }, () => { const c = document.createElement('div'); c.className = 'col'; container.append(c); return c; });
+  const placed = new Set();
+  config.columns.forEach((ids, i) => {
+    for (const id of ids) {
+      if (!(id in WIDGETS) || placed.has(id)) continue;
+      placed.add(id);
+      addWidget(id, cols[i]);
+    }
+  });
+  // Widgets not in the saved layout go to the emptiest column
+  for (const id of Object.keys(WIDGETS).filter(id => !placed.has(id))) {
+    addWidget(id, cols.reduce((a, b) => (b.children.length < a.children.length ? b : a)));
+  }
+
+  function addWidget(id, col) {
     const el = document.createElement('section');
     el.className = 'widget';
     el.dataset.id = id;
-    container.append(el);
+    col.append(el);
     WIDGETS[id](el);
-    // Rows are 1px tall, so each widget spans its own height (plus a 16px gap) and stacks directly under the one above it
-    const fit = () => { el.style.gridRowEnd = `span ${Math.ceil(el.offsetHeight) + 16}`; };
-    fit();
-    new ResizeObserver(fit).observe(el);
   }
 
   // Draggable is enabled only while a title is pressed, so text selection in inputs and notes still works.
@@ -424,20 +439,23 @@
   container.addEventListener('dragover', e => {
     if (!dragging) return;
     e.preventDefault();
-    const target = e.target.closest('.widget');
-    if (!target || target === dragging) return;
-    const r = target.getBoundingClientRect();
-    const d = dragging.getBoundingClientRect();
-    const sameRow = d.top < r.bottom && d.bottom > r.top;
-    const before = sameRow ? e.clientX < r.left + r.width / 2 : e.clientY < r.top + r.height / 2;
-    container.insertBefore(dragging, before ? target : target.nextSibling);
+    // The column under the pointer (by x position, so empty columns work), then the first widget whose middle is below the pointer
+    const col = cols.find(c => { const r = c.getBoundingClientRect(); return e.clientX >= r.left && e.clientX < r.right; })
+      || e.target.closest('.col');
+    if (!col) return;
+    const next = [...col.children].filter(w => w !== dragging).find(w => {
+      const r = w.getBoundingClientRect();
+      return e.clientY < r.top + r.height / 2;
+    });
+    if (next) { if (dragging.nextElementSibling !== next) col.insertBefore(dragging, next); }
+    else if (col.lastElementChild !== dragging) col.append(dragging);
   });
   container.addEventListener('dragend', () => {
     if (!dragging) return;
     dragging.classList.remove('dragging');
     dragging.draggable = false;
     dragging = null;
-    config.order = [...container.children].map(el => el.dataset.id);
+    config.columns = cols.map(c => [...c.children].map(el => el.dataset.id));
     save();
   });
   container.addEventListener('pointerup', () => {
