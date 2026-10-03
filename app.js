@@ -23,7 +23,7 @@
     ],
     weather: { name: 'New York', lat: 40.71, lon: -74.01, unit: 'fahrenheit' },
     notes: '',
-    order: ['bookmarks', 'weather', 'notes'],
+    order: ['bookmarks', 'weather', 'calendar', 'notes'],
   };
 
   // ---------- helpers ----------
@@ -361,10 +361,38 @@
     root.replaceChildren(h('h2', {}, 'Notes'), area);
   }
 
+  // ---------- calendar ----------
+  function calendar(root) {
+    const today = new Date();
+    let year = today.getFullYear(), month = today.getMonth();
+    const shift = n => { const d = new Date(year, month + n, 1); year = d.getFullYear(); month = d.getMonth(); render(); };
+    const nav = (label, title, fn) => h('button', { title, onclick: fn }, label);
+
+    const render = () => {
+      const first = new Date(year, month, 1);
+      const days = new Date(year, month + 1, 0).getDate();
+      const cells = [];
+      for (let i = 0; i < first.getDay(); i++) cells.push(h('span', {}));
+      for (let d = 1; d <= days; d++) {
+        const isToday = d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+        cells.push(h('span', { class: isToday ? 'cal-day cal-today' : 'cal-day' }, String(d)));
+      }
+      const heads = ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(l => h('span', { class: 'cal-head' }, l));
+      root.replaceChildren(
+        h('h2', {}, first.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
+          h('span', { class: 'btns' },
+            nav('\u00AB', 'Previous year', () => shift(-12)), nav('\u2039', 'Previous month', () => shift(-1)),
+            nav('Today', 'Back to this month', () => { year = today.getFullYear(); month = today.getMonth(); render(); }),
+            nav('\u203A', 'Next month', () => shift(1)), nav('\u00BB', 'Next year', () => shift(12)))),
+        h('div', { class: 'cal-grid' }, ...heads, ...cells));
+    };
+    render();
+  }
+
   // ---------- widget grid with drag-to-reorder ----------
   quicklaunch(document.getElementById('quicklaunch'));
 
-  const WIDGETS = { bookmarks, weather, notes };
+  const WIDGETS = { bookmarks, weather, notes, calendar };
   const container = document.getElementById('widgets');
   // Saved order first, then any widgets missing from it
   const order = [...config.order.filter(id => id in WIDGETS), ...Object.keys(WIDGETS).filter(id => !config.order.includes(id))];

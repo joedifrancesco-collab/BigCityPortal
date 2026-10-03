@@ -9,6 +9,7 @@ A personal homepage, in the spirit of iGoogle. It is a plain HTML/CSS/JavaScript
 - Bookmarks shown as collapsible folders (folders first, then loose bookmarks), with an **Edit** button that reveals the delete buttons (on bookmarks and folders, where deleting a folder removes everything in it) and **Remove all**; long titles are truncated. Import from Chrome/Edge keeps your folder structure: Bookmarks manager â†’ â‹® â†’ Export bookmarks, then click Import.
 - Weather and 5-day forecast ([Open-Meteo](https://open-meteo.com/), no API key)
 - Notes
+- Calendar with today highlighted and month/year navigation
 - Drag widgets by their title to reorder them
 - Light/dark theme
 

@@ -47,4 +47,8 @@ span.ql-icon { padding:0; }
 .bm-folder[open] > summary::before { content:'\25BE'; }
 .bm-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; font-size:.9rem; }
 .widget li.bm-folder-item { display:block; padding:0; }
+.cal-grid { display:grid; grid-template-columns:repeat(7, 1fr); gap:2px; text-align:center; font-size:.85rem; }
+.cal-head { color:var(--muted); font-size:.75rem; padding:.2rem 0; }
+.cal-day { padding:.35rem 0; border-radius:50%; }
+.cal-today { background:var(--accent); color:#fff; font-weight:700; }
 .bm-list li > a { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
