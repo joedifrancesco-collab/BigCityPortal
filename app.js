@@ -3,6 +3,7 @@
 
   const STORAGE_KEY = 'bcp-config';
   const COLUMNS = 3;
+  const CAPPED = new Set(['notes', 'bookmarks', 'news', 'stocks', 'sports']);
   const LEAGUES = {
     nfl: ['NFL', 'football/nfl'], nba: ['NBA', 'basketball/nba'], mlb: ['MLB', 'baseball/mlb'], nhl: ['NHL', 'hockey/nhl'],
     wnba: ['WNBA', 'basketball/wnba'], cfb: ['College Football', 'football/college-football'],
@@ -652,7 +653,32 @@
     el.dataset.id = id;
     col.append(el);
     WIDGETS[id](el);
+    if (CAPPED.has(id)) capHeight(el);
   }
+
+  // Tall widgets stop at the height of the Weather widget (CSS --cap) until the user expands them
+  function capHeight(el) {
+    let expanded = false;
+    const more = h('button', { class: 'cap-toggle', onclick: () => { expanded = !expanded; update(); } });
+    const mo = new MutationObserver(() => update());
+    const watch = () => mo.observe(el, { childList: true, subtree: true, attributes: true, attributeFilter: ['open'] });
+    function update() {
+      mo.disconnect();
+      el.classList.remove('capped', 'expanded');
+      const cap = parseFloat(getComputedStyle(el).getPropertyValue('--cap')) || 331;
+      const tall = el.scrollHeight > cap + 1;
+      more.hidden = true; // measure the content without the button
+      if (more.parentElement !== el) el.append(more);
+      el.classList.toggle('capped', tall && !expanded);
+      el.classList.toggle('expanded', tall && expanded);
+      more.hidden = !tall;
+      more.textContent = expanded ? '\u25B4 Show less' : '\u25BE Show more';
+      more.title = expanded ? 'Collapse this section' : 'Expand this section to full height';
+      watch();
+    }
+    update();
+  }
+
 
   // Draggable is enabled only while a title is pressed, so text selection in inputs and notes still works.
   let dragging = null;
