@@ -47,3 +47,4 @@ span.ql-icon { padding:0; }
 .bm-folder[open] > summary::before { content:'\25BE'; }
 .bm-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; font-size:.9rem; }
 .widget li.bm-folder-item { display:block; padding:0; }
+.bm-list li > a { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }

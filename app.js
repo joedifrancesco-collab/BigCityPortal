@@ -233,9 +233,13 @@
 
     const removeAt = (list, node) => { list.splice(list.indexOf(node), 1); save(); render(); };
 
+    const MAX_TITLE = 60;
+    const short = s => s.length > MAX_TITLE ? s.slice(0, MAX_TITLE - 1) + '\u2026' : s;
+    let editing = false; // delete buttons are only shown in edit mode
+
     const bookmarkRow = (b, list) => h('li', {},
-      h('a', { href: safeUrl(b.url), target: '_blank', rel: 'noopener' }, b.title),
-      h('button', { class: 'x', title: 'Remove', onclick: () => removeAt(list, b) }, '\u2715'));
+      h('a', { href: safeUrl(b.url), target: '_blank', rel: 'noopener', title: b.title }, short(b.title)),
+      editing ? h('button', { class: 'x', title: 'Remove', onclick: () => removeAt(list, b) }, '\u2715') : null);
 
     // Folders first, then individual bookmarks
     const renderList = (list, path) => {
@@ -251,7 +255,7 @@
         if (confirm(`Delete the folder "${f.title}" and ${n} bookmark${n === 1 ? '' : 's'} inside it?`)) removeAt(parent, f);
       } }, '\u2715');
       const d = h('details', { class: 'bm-folder' },
-        h('summary', {}, h('span', { class: 'bm-name' }, `\u{1F4C1} ${f.title}`), h('span', { class: 'muted' }, String(countLinks(f.children))), remove),
+        h('summary', {}, h('span', { class: 'bm-name', title: f.title }, `\u{1F4C1} ${short(f.title)}`), h('span', { class: 'muted' }, String(countLinks(f.children))), editing ? remove : null),
         renderList(f.children, path));
       d.open = open.has(key(path));
       d.addEventListener('toggle', () => { if (d.open) open.add(key(path)); else open.delete(key(path)); });
@@ -282,7 +286,7 @@
 
       const picker = h('input', { type: 'file', accept: '.html,text/html', hidden: '' });
       picker.onchange = () => picker.files[0] && importFile(picker.files[0]);
-      const importBtn = h('button', { title: 'In Chrome/Edge: Bookmarks manager ? ? ? Export bookmarks', onclick: () => picker.click() }, 'Import');
+      const importBtn = h('button', { title: 'In Chrome/Edge: Bookmarks manager \u2192 \u22EE \u2192 Export bookmarks', onclick: () => picker.click() }, 'Import');
       const removeAll = h('button', { title: 'Delete all bookmarks and folders', onclick: () => {
         const n = countLinks(config.bookmarks);
         if (!n && !config.bookmarks.length) return;
@@ -290,8 +294,10 @@
         config.bookmarks = []; open.clear(); message = ''; save(); render();
       } }, 'Remove all');
 
+      const editBtn = h('button', { title: 'Show delete buttons', onclick: () => { editing = !editing; render(); } }, editing ? 'Done' : 'Edit');
+
       root.replaceChildren(
-        h('h2', {}, 'Bookmarks', h('span', { class: 'btns' }, removeAll, importBtn)),
+        h('h2', {}, 'Bookmarks', h('span', { class: 'btns' }, editing ? removeAll : null, importBtn, editBtn)),
         renderList(config.bookmarks, []),
         h('div', { class: 'row' }, title, url, add), picker,
         h('div', { class: 'muted' }, message));

@@ -1,4 +1,4 @@
-# Big City Portal (BCP)
+﻿# Big City Portal (BCP)
 
 A personal homepage, in the spirit of iGoogle. It is a plain HTML/CSS/JavaScript page with no server, no build step and no dependencies.
 
@@ -6,7 +6,7 @@ A personal homepage, in the spirit of iGoogle. It is a plain HTML/CSS/JavaScript
 
 - Search bar (Google, Bing, DuckDuckGo), results open in a new tab
 - Quick launch tiles for your favorite web apps (click Edit to add or remove)
-- Bookmarks shown as collapsible folders (folders first, then loose bookmarks), with **Remove all** and a delete button on every folder (deletes the folder and everything in it). Import from Chrome/Edge keeps your folder structure: Bookmarks manager → ⋮ → Export bookmarks, then click Import.
+- Bookmarks shown as collapsible folders (folders first, then loose bookmarks), with an **Edit** button that reveals the delete buttons (on bookmarks and folders, where deleting a folder removes everything in it) and **Remove all**; long titles are truncated. Import from Chrome/Edge keeps your folder structure: Bookmarks manager â†’ â‹® â†’ Export bookmarks, then click Import.
 - Weather and 5-day forecast ([Open-Meteo](https://open-meteo.com/), no API key)
 - Notes
 - Drag widgets by their title to reorder them
@@ -14,7 +14,7 @@ A personal homepage, in the spirit of iGoogle. It is a plain HTML/CSS/JavaScript
 
 ## Use
 
-Open `index.html` in Chrome or Edge, or double-click it. To make it your homepage, set the browser's homepage (Settings → On startup / Home button) to the file's address, for example `file:///C:/Users/you/OneDrive/Documents/Development/Source/Repos/BigCityPortal/index.html`.
+Open `index.html` in Chrome or Edge, or double-click it. To make it your homepage, set the browser's homepage (Settings â†’ On startup / Home button) to the file's address, for example `file:///C:/Users/you/OneDrive/Documents/Development/Source/Repos/BigCityPortal/index.html`.
 
 ## Settings
 
