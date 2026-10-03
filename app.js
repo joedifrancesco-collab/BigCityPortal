@@ -24,6 +24,7 @@
     ],
     weather: { name: 'New York', lat: 40.71, lon: -74.01, unit: 'fahrenheit' },
     notes: '',
+    clock24: false,
     columns: [['notes', 'weather'], ['bookmarks'], ['calendar']],
   };
 
@@ -98,6 +99,7 @@
       c.weather = { name: w.name, lat: w.lat, lon: w.lon, unit: w.unit === 'celsius' ? 'celsius' : 'fahrenheit' };
     }
     if (str(raw.notes)) c.notes = raw.notes;
+    if (typeof raw.clock24 === 'boolean') c.clock24 = raw.clock24;
     if (Array.isArray(raw.columns) && raw.columns.length) {
       c.columns = raw.columns.slice(0, COLUMNS).map(col => Array.isArray(col) ? col.filter(str) : []);
       while (c.columns.length < COLUMNS) c.columns.push([]);
@@ -368,6 +370,22 @@
     root.replaceChildren(h('h2', {}, 'Notes'), area);
   }
 
+  // ---------- clock ----------
+  function clockWidget(root) {
+    const time = h('div', { class: 'clock-time' });
+    const date = h('div', { class: 'muted clock-date' });
+    const toggle = h('button', { title: 'Switch between 12-hour and 24-hour time', onclick: () => { config.clock24 = !config.clock24; save(); tick(); } });
+    const tick = () => {
+      const now = new Date();
+      time.textContent = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: !config.clock24 });
+      date.textContent = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+      toggle.textContent = config.clock24 ? '24h' : '12h';
+    };
+    root.replaceChildren(h('h2', {}, 'Clock', toggle), time, date);
+    tick();
+    setInterval(tick, 1000);
+  }
+
   // ---------- calendar ----------
   function calendar(root) {
     const today = new Date();
@@ -399,7 +417,7 @@
   // ---------- widget columns with drag between and within columns ----------
   quicklaunch(document.getElementById('quicklaunch'));
 
-  const WIDGETS = { bookmarks, weather, notes, calendar };
+  const WIDGETS = { bookmarks, weather, notes, calendar, clock: clockWidget };
   const container = document.getElementById('widgets');
   const cols = Array.from({ length: COLUMNS }, () => { const c = document.createElement('div'); c.className = 'col'; container.append(c); return c; });
   const placed = new Set();
