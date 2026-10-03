@@ -1,7 +1,0 @@
-{
-  "name": "big-city-portal",
-  "version": "0.1.0",
-  "description": "Big City Portal (BCP) - personal homepage",
-  "private": true,
-  "scripts": { "start": "node server.js" }
-}
