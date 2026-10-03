@@ -44,6 +44,8 @@
   // ---------- helpers ----------
   const isHttp = u => /^https?:\/\//i.test(u);
   const safeUrl = u => (isHttp(u) ? u : '#');
+  // Widget title that opens the related site in a new tab (not draggable, so the header can still drag the widget)
+  const titleLink = (text, url) => h('a', { class: 'title-link', href: url, target: '_blank', rel: 'noopener', draggable: 'false', title: 'Open ' + url.replace(/^https:\/\/(www\.)?/, '') }, text, ' \u2197');
 
   function h(tag, props = {}, ...children) {
     const el = document.createElement(tag);
@@ -358,7 +360,7 @@
       } catch { status.textContent = 'Lookup failed'; }
     } }, 'Set');
     const unit = h('button', { onclick: () => { w.unit = w.unit === 'fahrenheit' ? 'celsius' : 'fahrenheit'; save(); refresh(); } }, '°F/°C');
-    root.replaceChildren(h('h2', {}, 'Weather', unit), body, h('div', { class: 'row' }, place, change), status);
+    root.replaceChildren(h('h2', {}, titleLink('Weather', 'https://weather.com'), unit), body, h('div', { class: 'row' }, place, change), status);
 
     async function refresh() {
       try {
@@ -515,7 +517,7 @@
         config.stocks.symbols.push(s); save(); loaded = false; render();
       } }, 'Add');
       root.replaceChildren(...[
-        h('h2', {}, 'Stocks', h('span', { class: 'btns' }, refresh, edit)),
+        h('h2', {}, titleLink('Stocks', 'https://finance.yahoo.com'), h('span', { class: 'btns' }, refresh, edit)),
         !config.stocks.key
           ? h('div', { class: 'muted' }, 'Quotes need a free API key from finnhub.io. Click Edit to paste it.')
           : h('ul', { class: 'stock-list' }, ...config.stocks.symbols.map(row)),
@@ -576,7 +578,7 @@
       else if (state.error) body = h('div', { class: 'muted' }, state.error);
       else if (!state.games.length) body = h('div', { class: 'muted' }, 'No games today');
       else body = h('ul', { class: 'game-list' }, ...state.games.map(gameEl));
-      root.replaceChildren(h('h2', {}, 'Scores', h('span', { class: 'btns' }, sel, refresh)), body);
+      root.replaceChildren(h('h2', {}, titleLink('Scores', 'https://www.espn.com'), h('span', { class: 'btns' }, sel, refresh)), body);
     };
     load();
   }

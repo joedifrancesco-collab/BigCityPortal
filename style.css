@@ -78,3 +78,5 @@ span.ql-icon { padding:0; }
 .game-status { font-size:.8rem; }
 .stock-id { min-width:0; }
 .stock-name { font-size:.78rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+a.title-link { color:inherit; text-decoration:none; }
+a.title-link:hover { text-decoration:underline; }
