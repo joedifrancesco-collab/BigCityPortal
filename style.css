@@ -86,3 +86,8 @@ a.title-link:hover { text-decoration:underline; }
 .cap-toggle { display:block; width:100%; margin-top:.5rem; font-size:.78rem; padding:.25rem; cursor:pointer; background:var(--card); color:inherit; border:1px solid var(--border); border-radius:6px; }
 .cap-toggle[hidden] { display:none; }
 .widget.capped .cap-toggle { position:absolute; left:0; right:0; bottom:0; margin:0; border:none; border-top:1px solid var(--border); border-radius:0 0 10px 10px; box-shadow:0 -14px 12px -6px var(--card); }
+
+.wide { display:flex; flex-direction:column; gap:1rem; width:calc((100% - 2rem) / 3 * 2 + 1rem); margin-bottom:1rem; }
+.wide:empty { display:none; }
+.wide.drop-ready:empty { display:block; min-height:3.5rem; border:2px dashed var(--border); border-radius:10px; }
+@media (max-width: 900px) { .wide, .wide.drop-ready:empty { width:100%; } }
