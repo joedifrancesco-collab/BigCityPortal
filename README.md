@@ -15,6 +15,7 @@ A personal homepage, in the spirit of iGoogle. It is a plain HTML/CSS/JavaScript
 - Tall sections (Notes, Bookmarks, News, Stocks, Scores) stop at the height of the Weather widget; a Show more / Show less bar appears when there is more to see.
 - Clock (12h/24h toggle)
 - Calendar with today highlighted and month/year navigation
+- Jotform Dino Game widget embedded from Jotform; its third-party script contacts Jotform when the page loads
 - Drag widgets by their title to reorder them
 - Light/dark theme
 

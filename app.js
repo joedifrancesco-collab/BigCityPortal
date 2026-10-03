@@ -3,7 +3,7 @@
 
   const STORAGE_KEY = 'bcp-config';
   const COLUMNS = 3;
-  const CAPPED = new Set(['notes', 'bookmarks', 'news', 'stocks', 'sports']);
+  const CAPPED = new Set(['notes', 'bookmarks', 'news', 'stocks', 'sports', 'jotform']);
   const LEAGUES = {
     nfl: ['NFL', 'football/nfl'], nba: ['NBA', 'basketball/nba'], mlb: ['MLB', 'baseball/mlb'], nhl: ['NHL', 'hockey/nhl'],
     wnba: ['WNBA', 'basketball/wnba'], cfb: ['College Football', 'football/college-football'],
@@ -628,10 +628,20 @@
     render();
   }
 
+  // ---------- Jotform website widget ----------
+  function jotform(root) {
+    const target = h('div', { id: 'JFWebsiteWidget-01a1038c0b4070008feb022c587f63db52bb' });
+    const script = document.createElement('script');
+    script.src = 'https://www.jotform.com/website-widgets/embed/01a1038c0b4070008feb022c587f63db52bb';
+    script.defer = true;
+    root.replaceChildren(h('h2', {}, 'Jotform'), target);
+    root.append(script);
+  }
+
   // ---------- widget columns with drag between and within columns ----------
   quicklaunch(document.getElementById('quicklaunch'));
 
-  const WIDGETS = { bookmarks, weather, notes, calendar, clock: clockWidget, news, stocks, sports };
+  const WIDGETS = { bookmarks, weather, notes, calendar, clock: clockWidget, news, stocks, sports, jotform };
   const container = document.getElementById('widgets');
   const cols = Array.from({ length: COLUMNS }, () => { const c = document.createElement('div'); c.className = 'col'; container.append(c); return c; });
   const placed = new Set();
