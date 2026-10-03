@@ -3,7 +3,7 @@
 
   const STORAGE_KEY = 'bcp-config';
   const DEFAULTS = {
-    theme: 'light',
+    theme: 'dark',
     engine: 'Google',
     engines: {
       Google: 'https://www.google.com/search?q=',
