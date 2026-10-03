@@ -16,7 +16,7 @@ A personal homepage, in the spirit of iGoogle. It is a plain HTML/CSS/JavaScript
 - Clock (12h/24h toggle)
 - Calendar with today highlighted and month/year navigation
 - Jotform Dino Game widget embedded from Jotform; its third-party script contacts Jotform when the page loads
-- Drag widgets by their title to reorder them, between the three columns or into the double-width row above them (the Jotform widget lives there by default)
+- Drag widgets by their title to reorder them
 - Light/dark theme
 
 ## Use

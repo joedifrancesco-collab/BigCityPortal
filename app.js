@@ -40,7 +40,6 @@
     stocks: { key: '', symbols: ['AAPL', 'MSFT', 'GOOGL', 'AMZN'], names: {} },
     sports: { league: 'nfl' },
     columns: [['notes', 'weather'], ['bookmarks'], ['calendar']],
-    wide: ['jotform'], // widgets in the double-width row above the columns
   };
 
   // ---------- helpers ----------
@@ -124,7 +123,6 @@
             if (s.names && typeof s.names === 'object') for (const k of c.stocks.symbols) if (str(s.names[k])) c.stocks.names[k] = s.names[k].slice(0, 80);
           }
     if (raw.sports && LEAGUE_IDS.includes(raw.sports.league)) c.sports = { league: raw.sports.league };
-    if (Array.isArray(raw.wide)) c.wide = raw.wide.filter(str);
     if (Array.isArray(raw.columns) && raw.columns.length) {
       c.columns = raw.columns.slice(0, COLUMNS).map(col => Array.isArray(col) ? col.filter(str) : []);
       while (c.columns.length < COLUMNS) c.columns.push([]);
@@ -645,16 +643,8 @@
 
   const WIDGETS = { bookmarks, weather, notes, calendar, clock: clockWidget, news, stocks, sports, jotform };
   const container = document.getElementById('widgets');
-  const wide = document.createElement('div');
-  wide.className = 'wide';
-  container.before(wide);
   const cols = Array.from({ length: COLUMNS }, () => { const c = document.createElement('div'); c.className = 'col'; container.append(c); return c; });
   const placed = new Set();
-  for (const id of config.wide) {
-    if (!(id in WIDGETS) || placed.has(id)) continue;
-    placed.add(id);
-    addWidget(id, wide);
-  }
   config.columns.forEach((ids, i) => {
     for (const id of ids) {
       if (!(id in WIDGETS) || placed.has(id)) continue;
@@ -701,27 +691,23 @@
 
 
   // Draggable is enabled only while a title is pressed, so text selection in inputs and notes still works.
-  const layout = container.parentElement; // holds both the wide row and the columns
   let dragging = null;
-  layout.addEventListener('pointerdown', e => {
+  container.addEventListener('pointerdown', e => {
     const handle = e.target.closest('.widget > h2');
     if (handle) handle.parentElement.draggable = true;
   });
-  layout.addEventListener('dragstart', e => {
+  container.addEventListener('dragstart', e => {
     dragging = e.target.closest('.widget');
     if (!dragging) return;
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', dragging.dataset.id);
-    requestAnimationFrame(() => { dragging?.classList.add('dragging'); wide.classList.add('drop-ready'); });
+    requestAnimationFrame(() => dragging.classList.add('dragging'));
   });
-  layout.addEventListener('dragover', e => {
+  container.addEventListener('dragover', e => {
     if (!dragging) return;
     e.preventDefault();
-    // The wide row if the pointer is inside it, else the column under the pointer (by x position, so empty columns work);
-    // then the first widget whose middle is below the pointer
-    const inside = (el, x, y) => { const r = el.getBoundingClientRect(); return x >= r.left && x < r.right && (y === undefined || (y >= r.top && y < r.bottom)); };
-    const col = (inside(wide, e.clientX, e.clientY) && wide)
-      || cols.find(c => inside(c, e.clientX))
+    // The column under the pointer (by x position, so empty columns work), then the first widget whose middle is below the pointer
+    const col = cols.find(c => { const r = c.getBoundingClientRect(); return e.clientX >= r.left && e.clientX < r.right; })
       || e.target.closest('.col');
     if (!col) return;
     const next = [...col.children].filter(w => w !== dragging).find(w => {
@@ -731,17 +717,15 @@
     if (next) { if (dragging.nextElementSibling !== next) col.insertBefore(dragging, next); }
     else if (col.lastElementChild !== dragging) col.append(dragging);
   });
-  layout.addEventListener('dragend', () => {
+  container.addEventListener('dragend', () => {
     if (!dragging) return;
     dragging.classList.remove('dragging');
     dragging.draggable = false;
     dragging = null;
-    wide.classList.remove('drop-ready');
-    config.wide = [...wide.children].map(el => el.dataset.id);
     config.columns = cols.map(c => [...c.children].map(el => el.dataset.id));
     save();
   });
-  layout.addEventListener('pointerup', () => {
-    if (!dragging) layout.querySelectorAll('.widget[draggable="true"]').forEach(el => { el.draggable = false; });
+  container.addEventListener('pointerup', () => {
+    if (!dragging) container.querySelectorAll('.widget[draggable="true"]').forEach(el => { el.draggable = false; });
   });
 })();
