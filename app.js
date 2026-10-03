@@ -3,7 +3,7 @@
 
   const STORAGE_KEY = 'bcp-config';
   const COLUMNS = 3;
-  const CAPPED = new Set(['notes', 'bookmarks', 'news', 'stocks', 'sports', 'jotform']);
+  const CAPPED = new Set(['notes', 'bookmarks', 'news', 'stocks', 'sports']);
   const LEAGUES = {
     nfl: ['NFL', 'football/nfl'], nba: ['NBA', 'basketball/nba'], mlb: ['MLB', 'baseball/mlb'], nhl: ['NHL', 'hockey/nhl'],
     wnba: ['WNBA', 'basketball/wnba'], cfb: ['College Football', 'football/college-football'],
