@@ -571,7 +571,8 @@
 
     const render = () => {
       const sel = h('select', { title: 'League', onchange: () => { config.sports.league = sel.value; save(); load(); } },
-        ...Object.entries(LEAGUES).map(([k, [name]]) => h('option', { value: k, selected: k === config.sports.league }, name)));
+        ...Object.entries(LEAGUES).map(([k, [name]]) => h('option', { value: k }, name)));
+      sel.value = config.sports.league;
       const refresh = h('button', { title: 'Refresh scores', onclick: load }, '\u21BB');
       let body;
       if (state.loading) body = h('div', { class: 'muted' }, 'Loading\u2026');
