@@ -402,6 +402,10 @@
     el.dataset.id = id;
     container.append(el);
     WIDGETS[id](el);
+    // Rows are 1px tall, so each widget spans its own height (plus a 16px gap) and stacks directly under the one above it
+    const fit = () => { el.style.gridRowEnd = `span ${Math.ceil(el.offsetHeight) + 16}`; };
+    fit();
+    new ResizeObserver(fit).observe(el);
   }
 
   // Draggable is enabled only while a title is pressed, so text selection in inputs and notes still works.
