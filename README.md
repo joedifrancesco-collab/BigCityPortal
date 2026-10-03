@@ -6,7 +6,7 @@ A personal homepage, in the spirit of iGoogle. It is a plain HTML/CSS/JavaScript
 
 - Search bar (Google, Bing, DuckDuckGo), results open in a new tab
 - Quick launch tiles for your favorite web apps (click Edit to add or remove)
-- Bookmarks, with import from Chrome/Edge (Bookmarks manager → ⋮ → Export bookmarks, then click Import)
+- Bookmarks shown as collapsible folders (folders first, then loose bookmarks), with **Remove all** and a delete button on every folder (deletes the folder and everything in it). Import from Chrome/Edge keeps your folder structure: Bookmarks manager → ⋮ → Export bookmarks, then click Import.
 - Weather and 5-day forecast ([Open-Meteo](https://open-meteo.com/), no API key)
 - Notes
 - Drag widgets by their title to reorder them

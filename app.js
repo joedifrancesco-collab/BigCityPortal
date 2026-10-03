@@ -41,6 +41,34 @@
     return el;
   }
 
+  // ---------- bookmark tree helpers ----------
+  // A node is either { title, url } or a folder { title, children: [...] }.
+  const MAX_DEPTH = 12;
+  const isFolder = n => Array.isArray(n.children);
+
+  function cleanNodes(list, depth) {
+    return list.map(n => {
+      if (!n || typeof n.title !== 'string') return null;
+      if (Array.isArray(n.children) && depth < MAX_DEPTH) return { title: n.title, children: cleanNodes(n.children, depth + 1) };
+      if (typeof n.url === 'string' && isHttp(n.url)) return { title: n.title, url: n.url };
+      return null;
+    }).filter(Boolean);
+  }
+
+  // Adds node under the folder path (creating or reusing folders by name); skips an identical URL in that folder.
+  function insertAt(tree, path, node) {
+    let list = tree;
+    for (const name of path) {
+      let folder = list.find(n => isFolder(n) && n.title === name);
+      if (!folder) { folder = { title: name, children: [] }; list.push(folder); }
+      list = folder.children;
+    }
+    if (node && !(node.url && list.some(n => n.url === node.url))) { list.push(node); return true; }
+    return false;
+  }
+
+  const countLinks = list => list.reduce((n, b) => n + (isFolder(b) ? countLinks(b.children) : 1), 0);
+
   // ---------- config (browser localStorage) ----------
   // Keeps only the fields BCP uses and validates their shapes, so imported files can't break the page.
   function normalize(raw) {
@@ -54,11 +82,16 @@
     }
     c.engine = str(raw.engine) && c.engines[raw.engine] ? raw.engine : Object.keys(c.engines)[0];
     const links = list => Array.isArray(list)
-      ? list.filter(b => b && str(b.title) && str(b.url) && isHttp(b.url))
-          .map(b => ({ title: b.title, url: b.url, ...(str(b.folder) && b.folder ? { folder: b.folder } : {}) }))
+      ? list.filter(b => b && str(b.title) && str(b.url) && isHttp(b.url)).map(b => ({ title: b.title, url: b.url }))
       : null;
-    c.bookmarks = links(raw.bookmarks) ?? c.bookmarks;
     c.quicklaunch = links(raw.quicklaunch) ?? c.quicklaunch;
+    if (Array.isArray(raw.bookmarks)) {
+      c.bookmarks = cleanNodes(raw.bookmarks, 0);
+      // Older versions stored a flat list with a "Parent / Child" folder string
+      const legacy = raw.bookmarks.filter(b => b && !Array.isArray(b.children) && str(b.folder) && b.folder);
+      c.bookmarks = c.bookmarks.filter(n => !n.url || !legacy.some(b => b.url === n.url && b.title === n.title));
+      for (const b of legacy) if (str(b.title) && isHttp(b.url)) insertAt(c.bookmarks, b.folder.split(' / '), { title: b.title, url: b.url });
+    }
     const w = raw.weather;
     if (w && str(w.name) && Number.isFinite(w.lat) && Number.isFinite(w.lon)) {
       c.weather = { name: w.name, lat: w.lat, lon: w.lon, unit: w.unit === 'celsius' ? 'celsius' : 'fahrenheit' };
@@ -160,56 +193,80 @@
     render();
   }
 
-  // ---------- bookmarks (with Chrome/Edge HTML import) ----------
-  // Parses a Chrome/Edge "Export bookmarks" HTML file (Netscape format)
+  // ---------- bookmarks (folders, with Chrome/Edge HTML import) ----------
+  // Parses a Chrome/Edge "Export bookmarks" HTML file (Netscape format) into [{ path: [...folders], node }] in file order.
+  // The toolbar/unfiled root wrappers ("Bookmarks bar", "Favorites bar", "Other bookmarks") are flattened away.
   function parseBookmarkFile(html) {
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const found = [];
-    for (const a of doc.querySelectorAll('a[href]')) {
-      const url = a.getAttribute('href').trim();
-      if (!isHttp(url)) continue;
+    const isRoot = h3 => h3.hasAttribute('personal_toolbar_folder') || h3.hasAttribute('unfiled_bookmarks_folder');
+    const pathOf = el => {
       const path = [];
-      for (let dl = a.closest('dl'); dl; dl = dl.parentElement?.closest('dl')) {
-        const name = dl.previousElementSibling?.tagName === 'H3' ? dl.previousElementSibling.textContent.trim() : '';
-        if (name) path.unshift(name);
+      for (let dl = el.closest('dl'); dl; dl = dl.parentElement?.closest('dl')) {
+        const head = dl.previousElementSibling;
+        if (head?.tagName === 'H3' && !isRoot(head) && head.textContent.trim()) path.unshift(head.textContent.trim());
       }
-      found.push({ title: a.textContent.trim() || url, url, folder: path.join(' / ') });
+      return path;
+    };
+    const found = [];
+    for (const el of doc.querySelectorAll('h3, a[href]')) {
+      if (el.tagName === 'H3') {
+        const name = el.textContent.trim();
+        if (name && !isRoot(el)) found.push({ path: [...pathOf(el), name], node: null });
+        continue;
+      }
+      const url = el.getAttribute('href').trim();
+      if (isHttp(url)) found.push({ path: pathOf(el), node: { title: el.textContent.trim() || url, url } });
     }
     return found;
   }
 
   function bookmarks(root) {
     let message = '';
+    const open = new Set(); // folder paths left expanded across re-renders
+    const key = path => path.join('\u0000');
 
-    const item = (b, i) => h('li', {},
+    const removeAt = (list, node) => { list.splice(list.indexOf(node), 1); save(); render(); };
+
+    const bookmarkRow = (b, list) => h('li', {},
       h('a', { href: safeUrl(b.url), target: '_blank', rel: 'noopener' }, b.title),
-      h('button', { class: 'x', title: 'Remove', onclick: () => { config.bookmarks.splice(i, 1); save(); render(); } }, '✕'));
+      h('button', { class: 'x', title: 'Remove', onclick: () => removeAt(list, b) }, '\u2715'));
+
+    // Folders first, then individual bookmarks
+    const renderList = (list, path) => {
+      const folders = list.filter(isFolder).map(f => folderEl(f, list, [...path, f.title]));
+      const items = list.filter(n => !isFolder(n)).map(b => bookmarkRow(b, list));
+      return h('ul', { class: 'bm-list' }, ...folders, ...items);
+    };
+
+    const folderEl = (f, parent, path) => {
+      const remove = h('button', { class: 'x', title: 'Delete folder and its contents', onclick: e => {
+        e.preventDefault(); e.stopPropagation();
+        const n = countLinks(f.children);
+        if (confirm(`Delete the folder "${f.title}" and ${n} bookmark${n === 1 ? '' : 's'} inside it?`)) removeAt(parent, f);
+      } }, '\u2715');
+      const d = h('details', { class: 'bm-folder' },
+        h('summary', {}, h('span', { class: 'bm-name' }, `\u{1F4C1} ${f.title}`), h('span', { class: 'muted' }, String(countLinks(f.children))), remove),
+        renderList(f.children, path));
+      d.open = open.has(key(path));
+      d.addEventListener('toggle', () => { if (d.open) open.add(key(path)); else open.delete(key(path)); });
+      return h('li', { class: 'bm-folder-item' }, d);
+    };
 
     const importFile = async file => {
       try {
         const parsed = parseBookmarkFile(await file.text());
-        const known = new Set(config.bookmarks.map(b => b.url));
-        const fresh = parsed.filter(b => !known.has(b.url) && known.add(b.url));
-        config.bookmarks.push(...fresh);
+        let added = 0;
+        for (const { path, node } of parsed) if (insertAt(config.bookmarks, path, node) && node) added++;
+        const links = parsed.filter(p => p.node).length;
         save();
-        message = `Imported ${fresh.length} bookmark${fresh.length === 1 ? '' : 's'}` +
-          (parsed.length - fresh.length ? `, skipped ${parsed.length - fresh.length} duplicates` : '');
+        message = `Imported ${added} bookmark${added === 1 ? '' : 's'}` + (links - added ? `, skipped ${links - added} duplicates` : '');
       } catch { message = 'Could not read that file'; }
       render();
     };
 
     const render = () => {
-      const folders = new Map();
-      const loose = [];
-      config.bookmarks.forEach((b, i) => {
-        if (!b.folder) loose.push(item(b, i));
-        else (folders.get(b.folder) ?? folders.set(b.folder, []).get(b.folder)).push(item(b, i));
-      });
-      const groups = [...folders].map(([name, items]) =>
-        h('details', {}, h('summary', {}, `${name} (${items.length})`), h('ul', {}, ...items)));
-
       const title = h('input', { placeholder: 'Title' });
-      const url = h('input', { placeholder: 'https://…' });
+      const url = h('input', { placeholder: 'https://\u2026' });
       const add = h('button', { onclick: () => {
         if (!title.value.trim() || !isHttp(url.value.trim())) return;
         config.bookmarks.push({ title: title.value.trim(), url: url.value.trim() });
@@ -219,10 +276,17 @@
 
       const picker = h('input', { type: 'file', accept: '.html,text/html', hidden: '' });
       picker.onchange = () => picker.files[0] && importFile(picker.files[0]);
-      const importBtn = h('button', { title: 'In Chrome/Edge: Bookmarks manager → ⋮ → Export bookmarks', onclick: () => picker.click() }, 'Import');
+      const importBtn = h('button', { title: 'In Chrome/Edge: Bookmarks manager ? ? ? Export bookmarks', onclick: () => picker.click() }, 'Import');
+      const removeAll = h('button', { title: 'Delete all bookmarks and folders', onclick: () => {
+        const n = countLinks(config.bookmarks);
+        if (!n && !config.bookmarks.length) return;
+        if (!confirm(`Delete all ${n} bookmark${n === 1 ? '' : 's'} and folders? This cannot be undone.`)) return;
+        config.bookmarks = []; open.clear(); message = ''; save(); render();
+      } }, 'Remove all');
 
       root.replaceChildren(
-        h('h2', {}, 'Bookmarks', importBtn), h('ul', {}, ...loose), ...groups,
+        h('h2', {}, 'Bookmarks', h('span', { class: 'btns' }, removeAll, importBtn)),
+        renderList(config.bookmarks, []),
         h('div', { class: 'row' }, title, url, add), picker,
         h('div', { class: 'muted' }, message));
     };

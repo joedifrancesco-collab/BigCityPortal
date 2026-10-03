@@ -38,3 +38,12 @@ span.ql-icon { padding:0; }
 .ql-edit { max-width:640px; }
 [hidden] { display:none !important; }
 
+.widget h2 .btns { display:flex; gap:.3rem; }
+.bm-list { max-height:60vh; overflow-y:auto; overflow-x:hidden; }
+.bm-list .bm-list { max-height:none; overflow:visible; margin-left:.9rem; padding-left:.5rem; border-left:1px solid var(--border); }
+.bm-folder summary { list-style:none; display:flex; align-items:center; gap:.5rem; cursor:pointer; padding:.3rem 0; }
+.bm-folder summary::-webkit-details-marker { display:none; }
+.bm-folder summary::before { content:'\25B8'; color:var(--muted); width:.8rem; }
+.bm-folder[open] > summary::before { content:'\25BE'; }
+.bm-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; font-size:.9rem; }
+.widget li.bm-folder-item { display:block; padding:0; }
