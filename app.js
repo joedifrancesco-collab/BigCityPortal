@@ -600,6 +600,122 @@
     setInterval(tick, 1000);
   }
 
+  // ---------- calculator ----------
+  // Evaluates + - * / % without eval(): unary minus, and "%" after a number (200 + 10% means 200 + 10% of 200)
+  function calcEval(src) {
+    const t = src.match(/\d+\.\d*|\.\d+|\d+|[-+*/%]/g) || [];
+    if (t.join('') !== src) throw new Error('syntax');
+    let i = 0;
+    const unary = () => {
+      if (t[i] === '-') { i++; const r = unary(); return { v: -r.v, pct: r.pct }; }
+      const tok = t[i++];
+      if (tok === undefined || !/^[\d.]/.test(tok)) throw new Error('syntax');
+      let v = parseFloat(tok), pct = false;
+      while (t[i] === '%') { i++; v /= 100; pct = true; }
+      return { v, pct };
+    };
+    const term = () => {
+      let a = unary();
+      while (t[i] === '*' || t[i] === '/') {
+        const op = t[i++], b = unary();
+        if (op === '/' && b.v === 0) throw new Error('div0');
+        a = { v: op === '*' ? a.v * b.v : a.v / b.v, pct: false };
+      }
+      return a;
+    };
+    let acc = term().v;
+    while (t[i] === '+' || t[i] === '-') {
+      const op = t[i++], b = term();
+      const rhs = b.pct ? acc * b.v : b.v;
+      acc = op === '+' ? acc + rhs : acc - rhs;
+    }
+    if (i < t.length || !Number.isFinite(acc)) throw new Error('syntax');
+    return Number(acc.toPrecision(12)); // hides float noise such as 0.1 + 0.2
+  }
+
+  function calculator(root) {
+    const show = s => s.replace(/\*/g, '\u00D7').replace(/\//g, '\u00F7').replace(/-/g, '\u2212');
+    let expr = '', top = '', done = false, error = false;
+    const history = []; // this visit only, newest first
+
+    const topEl = h('div', { class: 'muted calc-top' });
+    const mainEl = h('div', { class: 'calc-main' });
+    const histEl = h('div', { class: 'calc-history' });
+    const clearHist = h('button', { title: 'Clear history', onclick: () => { history.length = 0; draw(); } }, 'Clear');
+
+    const draw = () => {
+      topEl.textContent = top || '\u00A0';
+      mainEl.textContent = error ? 'Error' : show(expr) || '0';
+      clearHist.hidden = !history.length;
+      histEl.replaceChildren(...history.map(e => h('button', { class: 'calc-hist-item', title: 'Use this result', onclick: () => { expr = e.result; top = ''; done = true; error = false; draw(); } },
+        h('span', { class: 'muted' }, show(e.expr) + ' ='), h('strong', { title: e.result }, show(e.result)))));
+    };
+
+    const press = key => {
+      if (error) { expr = ''; top = ''; error = false; done = false; }
+      const last = expr.slice(-1);
+      if (/[\d.]/.test(key)) {
+        if (done) { expr = ''; top = ''; done = false; }
+        const cur = expr.match(/[\d.]*$/)[0];
+        if (key === '.' && cur.includes('.')) return;
+        if (last === '%') return;
+        if (key === '.' && !cur) expr += '0';
+        expr += key;
+      } else if (/[-+*/]/.test(key)) {
+        if (done) { done = false; top = ''; }
+        if (!expr) { if (key === '-') expr = '-'; }
+        else if (expr === '-') return;
+        else if (/[-+*/]/.test(last)) expr = expr.slice(0, -1) + key;
+        else expr += key;
+      } else if (key === '%') {
+        if (/[\d.]/.test(last) || last === '%') { expr += '%'; done = false; }
+      } else if (key === '\u00B1') {
+        if (done) { done = false; top = ''; }
+        expr = expr.replace(/(^|[-+*/])(-?)(\d*\.?\d*%*)$/, (m, op, neg, num) => num ? op + (neg ? '' : '-') + num : m);
+      } else if (key === 'C') {
+        expr = ''; top = ''; done = false;
+      } else if (key === 'back') {
+        if (done) { expr = ''; top = ''; done = false; } else expr = expr.slice(0, -1);
+      } else if (key === '=') {
+        const src = expr.replace(/[-+*/.]+$/, '').replace(/^$/, '');
+        if (!src) return;
+        try {
+          const v = String(calcEval(src));
+          history.unshift({ expr: src, result: v });
+          history.length = Math.min(history.length, 5);
+          top = show(src) + ' =';
+          // Very large or small results print in exponent form, which can't be typed back in
+          expr = /e/i.test(v) ? '' : v;
+          if (!expr) top = show(src) + ' = ' + v;
+          done = !!expr;
+        } catch { error = true; top = show(src) + ' ='; }
+      }
+      draw();
+    };
+
+    const pad = [
+      ['C', 'back', '%', '/'],
+      ['7', '8', '9', '*'],
+      ['4', '5', '6', '-'],
+      ['1', '2', '3', '+'],
+      ['\u00B1', '0', '.', '='],
+    ];
+    const label = { back: '\u232B', '/': '\u00F7', '*': '\u00D7', '-': '\u2212' };
+    const grid = h('div', { class: 'calc-pad' }, ...pad.flat().map(k =>
+      h('button', { class: /[-+*/=]/.test(k) ? 'calc-op' : '', title: k === 'back' ? 'Backspace' : '', onclick: () => press(k) }, label[k] || k)));
+
+    // Type on the keyboard while the calculator has focus (it never reacts when you are typing in notes or search)
+    root.tabIndex = -1;
+    root.addEventListener('keydown', e => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const k = e.key === 'Enter' || e.key === '=' ? '=' : e.key === 'Backspace' ? 'back' : (e.key === 'Escape' || e.key === 'Delete') ? 'C' : e.key;
+      if (/^[\d.+\-*/%=]$/.test(k) || k === 'back' || k === 'C') { e.preventDefault(); press(k); }
+    });
+
+    root.replaceChildren(h('h2', {}, 'Calculator', clearHist), h('div', { class: 'calc-screen' }, topEl, mainEl), grid, histEl);
+    draw();
+  }
+
   // ---------- calendar ----------
   function calendar(root) {
     const today = new Date();
@@ -641,7 +757,7 @@
   // ---------- widget columns with drag between and within columns ----------
   quicklaunch(document.getElementById('quicklaunch'));
 
-  const WIDGETS = { bookmarks, weather, notes, calendar, clock: clockWidget, news, stocks, sports, jotform };
+  const WIDGETS = { bookmarks, weather, notes, calendar, clock: clockWidget, news, stocks, sports, jotform, calculator };
   const container = document.getElementById('widgets');
   const cols = Array.from({ length: COLUMNS }, () => { const c = document.createElement('div'); c.className = 'col'; container.append(c); return c; });
   const placed = new Set();

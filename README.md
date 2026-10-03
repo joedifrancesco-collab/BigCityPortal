@@ -14,6 +14,7 @@ A personal homepage, in the spirit of iGoogle. It is a plain HTML/CSS/JavaScript
 - Scores: live and recent scores for NFL, NBA, MLB, NHL, WNBA, college, MLS and Premier League, from ESPN's public scoreboard feed (no key).
 - Tall sections (Notes, Bookmarks, News, Stocks, Scores) stop at the height of the Weather widget; a Show more / Show less bar appears when there is more to see.
 - Clock (12h/24h toggle)
+- Calculator with keyboard input (click it, then type; Enter for equals, Esc to clear) and a short history of recent results (not saved)
 - Calendar with today highlighted and month/year navigation
 - Jotform Dino Game widget embedded from Jotform; its third-party script contacts Jotform when the page loads
 - Drag widgets by their title to reorder them

@@ -1,4 +1,4 @@
-:root { --bg:#f3f4f7; --card:#fff; --text:#1d2330; --muted:#6b7385; --accent:#2f6fed; --border:#dde1ea; }
+﻿:root { --bg:#f3f4f7; --card:#fff; --text:#1d2330; --muted:#6b7385; --accent:#2f6fed; --border:#dde1ea; }
 [data-theme="dark"] { --bg:#12151c; --card:#1b2030; --text:#e6e9f2; --muted:#8c95ab; --accent:#6c9bff; --border:#2a3147; }
 * { box-sizing: border-box; }
 body { margin:0; font-family: Segoe UI, system-ui, sans-serif; background:var(--bg); color:var(--text); }
@@ -86,3 +86,16 @@ a.title-link:hover { text-decoration:underline; }
 .cap-toggle { display:block; width:100%; margin-top:.5rem; font-size:.78rem; padding:.25rem; cursor:pointer; background:var(--card); color:inherit; border:1px solid var(--border); border-radius:6px; }
 .cap-toggle[hidden] { display:none; }
 .widget.capped .cap-toggle { position:absolute; left:0; right:0; bottom:0; margin:0; border:none; border-top:1px solid var(--border); border-radius:0 0 10px 10px; box-shadow:0 -14px 12px -6px var(--card); }
+
+.widget[data-id="calculator"]:focus { outline:none; }
+.calc-screen { background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:.5rem .7rem; margin-bottom:.6rem; text-align:right; overflow:hidden; }
+.calc-top { min-height:1.2em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.calc-main { font-size:1.8rem; font-weight:600; font-variant-numeric:tabular-nums; overflow-x:auto; white-space:nowrap; }
+.calc-pad { display:grid; grid-template-columns:repeat(4, 1fr); gap:.4rem; }
+.calc-pad button { padding:.6rem 0; font-size:1rem; }
+.calc-pad .calc-op { color:var(--accent); font-weight:700; }
+.calc-history { margin-top:.6rem; }
+.calc-hist-item { box-sizing:border-box; display:flex; justify-content:space-between; gap:.5rem; width:100%; margin-top:.25rem; padding:.25rem .5rem; font-size:.8rem; background:none; border-color:transparent; text-align:left; }
+.calc-hist-item:hover { border-color:var(--border); }
+.calc-hist-item span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.calc-hist-item strong { max-width:55%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
