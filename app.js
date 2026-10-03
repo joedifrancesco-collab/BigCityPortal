@@ -632,9 +632,9 @@
 
   // ---------- Jotform website widget ----------
   function jotform(root) {
-    const target = h('div', { id: 'JFWebsiteWidget-01a1039293207000825c140f3a7fe7b6a104' });
+    const target = h('div', { id: 'JFWebsiteWidget-01a1039afb78700089d3d9f58e87c94bea1f' });
     const script = document.createElement('script');
-    script.src = 'https://www.jotform.com/website-widgets/embed/01a1039293207000825c140f3a7fe7b6a104';
+    script.src = 'https://www.jotform.com/website-widgets/embed/01a1039afb78700089d3d9f58e87c94bea1f';
     script.defer = true;
     root.replaceChildren(h('h2', {}, 'Jotform'), target);
     root.append(script);
