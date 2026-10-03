@@ -3,6 +3,12 @@
 
   const STORAGE_KEY = 'bcp-config';
   const COLUMNS = 3;
+  const LEAGUES = {
+    nfl: ['NFL', 'football/nfl'], nba: ['NBA', 'basketball/nba'], mlb: ['MLB', 'baseball/mlb'], nhl: ['NHL', 'hockey/nhl'],
+    wnba: ['WNBA', 'basketball/wnba'], cfb: ['College Football', 'football/college-football'],
+    ncaam: ["Men's College Basketball", 'basketball/mens-college-basketball'], mls: ['MLS', 'soccer/usa.1'], epl: ['Premier League', 'soccer/eng.1'],
+  };
+  const LEAGUE_IDS = Object.keys(LEAGUES);
   const DEFAULTS = {
     theme: 'dark',
     engine: 'Google',
@@ -30,6 +36,8 @@
       { title: 'NBC News', url: 'https://feeds.nbcnews.com/nbcnews/public/news' },
     ],
     clock24: false,
+    stocks: { key: '', symbols: ['AAPL', 'MSFT', 'GOOGL', 'AMZN'] },
+    sports: { league: 'nfl' },
     columns: [['notes', 'weather'], ['bookmarks'], ['calendar']],
   };
 
@@ -106,6 +114,11 @@
     if (str(raw.notes)) c.notes = raw.notes;
     c.feeds = links(raw.feeds) ?? c.feeds;
     if (typeof raw.clock24 === 'boolean') c.clock24 = raw.clock24;
+    const s = raw.stocks;
+    if (s && Array.isArray(s.symbols)) {
+      c.stocks = { key: str(s.key) ? s.key.slice(0, 100) : '', symbols: [...new Set(s.symbols.filter(x => str(x) && /^[A-Z0-9.\-]{1,10}$/.test(x)))].slice(0, 20) };
+    }
+    if (raw.sports && LEAGUE_IDS.includes(raw.sports.league)) c.sports = { league: raw.sports.league };
     if (Array.isArray(raw.columns) && raw.columns.length) {
       c.columns = raw.columns.slice(0, COLUMNS).map(col => Array.isArray(col) ? col.filter(str) : []);
       while (c.columns.length < COLUMNS) c.columns.push([]);
@@ -440,6 +453,119 @@
     render();
   }
 
+  // ---------- stocks: quotes from Finnhub (needs a free API key, stored only in this browser) ----------
+  function stocks(root) {
+    const quotes = new Map(); // symbol -> { c, d, dp } | { error }
+    let editing = false, loaded = false;
+
+    const load = async () => {
+      loaded = true;
+      if (!config.stocks.key) return;
+      await Promise.all(config.stocks.symbols.map(async sym => {
+        try {
+          const r = await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(sym)}&token=${encodeURIComponent(config.stocks.key)}`);
+          if (!r.ok) throw new Error(r.status);
+          const q = await r.json();
+          quotes.set(sym, q.c ? { c: q.c, d: q.d, dp: q.dp } : { error: 'Unknown symbol' });
+        } catch (e) {
+          quotes.set(sym, { error: String(e.message) === '401' || String(e.message) === '403' ? 'Check API key' : 'Unavailable' });
+        }
+      }));
+      render();
+    };
+
+    const row = sym => {
+      const q = quotes.get(sym);
+      let val;
+      if (q?.error) val = h('span', { class: 'muted' }, q.error);
+      else if (q) {
+        const up = q.d >= 0;
+        val = h('span', { class: 'stock-val' }, q.c.toFixed(2), ' ',
+          h('span', { class: up ? 'up' : 'down' }, `${up ? '\u25B2' : '\u25BC'} ${Math.abs(q.d).toFixed(2)} (${Math.abs(q.dp).toFixed(2)}%)`));
+      } else val = h('span', { class: 'muted' }, config.stocks.key ? '\u2026' : '');
+      const x = h('button', { class: 'x', title: 'Remove', onclick: () => {
+        config.stocks.symbols = config.stocks.symbols.filter(s => s !== sym); quotes.delete(sym); save(); render();
+      } }, '\u2715');
+      return h('li', { class: 'stock-row' }, h('strong', {}, sym), val, editing ? x : null);
+    };
+
+    const render = () => {
+      const edit = h('button', { title: 'Edit symbols and API key', onclick: () => { editing = !editing; render(); } }, editing ? 'Done' : 'Edit');
+      const refresh = h('button', { title: 'Refresh quotes', onclick: () => { quotes.clear(); loaded = false; render(); } }, '\u21BB');
+      const key = h('input', { type: 'password', placeholder: 'Finnhub API key', value: config.stocks.key });
+      const saveKey = h('button', { onclick: () => { config.stocks.key = key.value.trim(); quotes.clear(); loaded = false; save(); render(); } }, 'Save key');
+      const sym = h('input', { placeholder: 'Symbol, e.g. AAPL' });
+      const add = h('button', { onclick: () => {
+        const s = sym.value.trim().toUpperCase();
+        if (!/^[A-Z0-9.\-]{1,10}$/.test(s) || config.stocks.symbols.includes(s)) return;
+        config.stocks.symbols.push(s); save(); loaded = false; render();
+      } }, 'Add');
+      root.replaceChildren(...[
+        h('h2', {}, 'Stocks', h('span', { class: 'btns' }, refresh, edit)),
+        !config.stocks.key
+          ? h('div', { class: 'muted' }, 'Quotes need a free API key from finnhub.io. Click Edit to paste it.')
+          : h('ul', { class: 'stock-list' }, ...config.stocks.symbols.map(row)),
+        editing ? h('div', { class: 'row' }, key, saveKey) : null,
+        editing ? h('div', { class: 'row' }, sym, add) : null,
+        h('div', { class: 'muted news-status' }, 'Quotes may be delayed.'),
+      ].filter(Boolean));
+      if (!loaded) load();
+    };
+    render();
+  }
+
+  // ---------- sports: scores from ESPN's public scoreboard feed ----------
+
+  function sports(root) {
+    let state = { loading: true };
+    let seq = 0;
+
+    const load = async () => {
+      const mine = ++seq;
+      state = { loading: true }; render();
+      try {
+        const r = await fetch(`https://site.api.espn.com/apis/site/v2/sports/${LEAGUES[config.sports.league][1]}/scoreboard`);
+        if (!r.ok) throw new Error(r.status);
+        const data = await r.json();
+        const games = (data.events || []).map(e => {
+          const comp = e.competitions?.[0];
+          const t = side => {
+            const c = comp?.competitors?.find(x => x.homeAway === side);
+            return { name: plain(c?.team?.abbreviation || c?.team?.shortDisplayName || '?'), score: c?.score };
+          };
+          return { away: t('away'), home: t('home'), status: plain(e.status?.type?.shortDetail), st: e.status?.type?.state, url: e.links?.[0]?.href };
+        });
+        if (mine === seq) state = { games };
+      } catch {
+        if (mine === seq) state = { error: 'Could not load scores' };
+      }
+      if (mine === seq) render();
+    };
+
+    const gameEl = g => {
+      const started = g.st === 'in' || g.st === 'post';
+      const line = (t, win) => h('div', { class: 'team' + (win ? ' win' : '') }, h('span', {}, t.name), h('span', {}, started ? String(t.score ?? '') : ''));
+      const a = Number(g.away.score), b = Number(g.home.score);
+      const done = g.st === 'post';
+      const body = h('div', { class: 'game' + (g.st === 'in' ? ' live' : '') },
+        h('div', { class: 'teams' }, line(g.away, done && a > b), line(g.home, done && b > a)),
+        h('div', { class: 'muted game-status' }, g.status));
+      return h('li', {}, isHttp(g.url || '') ? h('a', { href: g.url, target: '_blank', rel: 'noopener', class: 'game-link' }, body) : body);
+    };
+
+    const render = () => {
+      const sel = h('select', { title: 'League', onchange: () => { config.sports.league = sel.value; save(); load(); } },
+        ...Object.entries(LEAGUES).map(([k, [name]]) => h('option', { value: k, selected: k === config.sports.league }, name)));
+      const refresh = h('button', { title: 'Refresh scores', onclick: load }, '\u21BB');
+      let body;
+      if (state.loading) body = h('div', { class: 'muted' }, 'Loading\u2026');
+      else if (state.error) body = h('div', { class: 'muted' }, state.error);
+      else if (!state.games.length) body = h('div', { class: 'muted' }, 'No games today');
+      else body = h('ul', { class: 'game-list' }, ...state.games.map(gameEl));
+      root.replaceChildren(h('h2', {}, 'Scores', h('span', { class: 'btns' }, sel, refresh)), body);
+    };
+    load();
+  }
   // ---------- clock ----------
   function clockWidget(root) {
     const time = h('div', { class: 'clock-time' });
@@ -487,7 +613,7 @@
   // ---------- widget columns with drag between and within columns ----------
   quicklaunch(document.getElementById('quicklaunch'));
 
-  const WIDGETS = { bookmarks, weather, notes, calendar, clock: clockWidget, news };
+  const WIDGETS = { bookmarks, weather, notes, calendar, clock: clockWidget, news, stocks, sports };
   const container = document.getElementById('widgets');
   const cols = Array.from({ length: COLUMNS }, () => { const c = document.createElement('div'); c.className = 'col'; container.append(c); return c; });
   const placed = new Set();

@@ -61,3 +61,18 @@ span.ql-icon { padding:0; }
 .widget h2 select { font-size:.75rem; padding:.15rem .4rem; }
 .news-feed .news-list { margin:0 0 .4rem 1.3rem; }
 .news-feed .news-status { margin:.2rem 0 .5rem 1.3rem; }
+
+.stock-list, .game-list { list-style:none; margin:0; padding:0; }
+.stock-row { display:flex; justify-content:space-between; align-items:center; gap:.5rem; padding:.35rem 0; border-bottom:1px solid var(--border); }
+.stock-row:last-child { border-bottom:none; }
+.stock-val { font-variant-numeric:tabular-nums; }
+.up { color:#2fb457; }
+.down { color:#e5484d; }
+.game-list li { display:block; padding:.4rem 0; border-bottom:1px solid var(--border); }
+.game-list li:last-child { border-bottom:none; }
+.game-link { display:block; color:inherit; text-decoration:none; }
+.game-link:hover .teams { text-decoration:underline; }
+.team { display:flex; justify-content:space-between; font-variant-numeric:tabular-nums; }
+.team.win { font-weight:700; }
+.game.live .game-status { color:#e5484d; font-weight:600; }
+.game-status { font-size:.8rem; }

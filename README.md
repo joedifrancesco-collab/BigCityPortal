@@ -1,4 +1,4 @@
-﻿# Big City Portal (BCP)
+# Big City Portal (BCP)
 
 A personal homepage, in the spirit of iGoogle. It is a plain HTML/CSS/JavaScript page with no server, no build step and no dependencies.
 
@@ -10,6 +10,8 @@ A personal homepage, in the spirit of iGoogle. It is a plain HTML/CSS/JavaScript
 - Weather and 5-day forecast ([Open-Meteo](https://open-meteo.com/), no API key)
 - Notes
 - News: RSS feeds you choose (BBC, NPR and NBC by default), each collapsible; Edit to add or remove feeds. Headlines are fetched through the free third-party [rss2json](https://rss2json.com/) service, which sees the feed URLs you read (and your IP address). Nothing else is sent.
+- Stocks: quotes for the symbols you choose, via [Finnhub](https://finnhub.io/) (free API key required; paste it under Edit). The key is stored only in this browser's localStorage and is included in Export, so don't share exported files.
+- Scores: live and recent scores for NFL, NBA, MLB, NHL, WNBA, college, MLS and Premier League, from ESPN's public scoreboard feed (no key).
 - Clock (12h/24h toggle)
 - Calendar with today highlighted and month/year navigation
 - Drag widgets by their title to reorder them
