@@ -429,10 +429,11 @@
       const edit = h('button', { title: 'Add or remove feeds', onclick: () => { editing = !editing; render(); } }, editing ? 'Done' : 'Edit');
       const refresh = h('button', { title: 'Reload headlines', onclick: () => { cache.clear(); render(); } }, '\u21BB');
 
-      root.replaceChildren(
+      root.replaceChildren(...[
         h('h2', {}, 'News', h('span', { class: 'btns' }, refresh, edit)),
         config.feeds.length ? h('div', {}, ...config.feeds.map(feedEl)) : h('div', { class: 'muted' }, 'No feeds yet. Click Edit to add one.'),
-        editing ? h('div', { class: 'row' }, name, url, add) : null);
+        editing ? h('div', { class: 'row' }, name, url, add) : null,
+      ].filter(Boolean));
       // Fetch only feeds that are expanded and not loaded yet
       for (const f of config.feeds) if (open.has(f.url) && !cache.has(f.url)) load(f);
     };
