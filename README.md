@@ -9,7 +9,7 @@ A personal homepage, in the spirit of iGoogle. It is a plain HTML/CSS/JavaScript
 - Bookmarks shown as collapsible folders (folders first, then loose bookmarks), with an **Edit** button that reveals the delete buttons (on bookmarks and folders, where deleting a folder removes everything in it) and **Remove all**; long titles are truncated. Import from Chrome/Edge keeps your folder structure: Bookmarks manager â†’ â‹® â†’ Export bookmarks, then click Import.
 - Weather and 5-day forecast ([Open-Meteo](https://open-meteo.com/), no API key)
 - Notes
-- News headlines from Hacker News or Wikipedia's In the news (sources that allow direct browser access; no key or proxy)
+- News: RSS feeds you choose (BBC, NPR and NBC by default), each collapsible; Edit to add or remove feeds. Headlines are fetched through the free third-party [rss2json](https://rss2json.com/) service, which sees the feed URLs you read (and your IP address). Nothing else is sent.
 - Clock (12h/24h toggle)
 - Calendar with today highlighted and month/year navigation
 - Drag widgets by their title to reorder them

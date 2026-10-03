@@ -24,7 +24,11 @@
     ],
     weather: { name: 'New York', lat: 40.71, lon: -74.01, unit: 'fahrenheit' },
     notes: '',
-    newsSource: 'hn',
+    feeds: [
+      { title: 'BBC News', url: 'https://feeds.bbci.co.uk/news/rss.xml' },
+      { title: 'NPR News', url: 'https://feeds.npr.org/1001/rss.xml' },
+      { title: 'NBC News', url: 'https://feeds.nbcnews.com/nbcnews/public/news' },
+    ],
     clock24: false,
     columns: [['notes', 'weather'], ['bookmarks'], ['calendar']],
   };
@@ -100,7 +104,7 @@
       c.weather = { name: w.name, lat: w.lat, lon: w.lon, unit: w.unit === 'celsius' ? 'celsius' : 'fahrenheit' };
     }
     if (str(raw.notes)) c.notes = raw.notes;
-    if (raw.newsSource === 'hn' || raw.newsSource === 'wiki') c.newsSource = raw.newsSource;
+    c.feeds = links(raw.feeds) ?? c.feeds;
     if (typeof raw.clock24 === 'boolean') c.clock24 = raw.clock24;
     if (Array.isArray(raw.columns) && raw.columns.length) {
       c.columns = raw.columns.slice(0, COLUMNS).map(col => Array.isArray(col) ? col.filter(str) : []);
@@ -372,63 +376,67 @@
     root.replaceChildren(h('h2', {}, 'Notes'), area);
   }
 
-  // ---------- news (sources that allow browser requests, no API key) ----------
-  const NEWS_COUNT = 10;
-  const NEWS_SOURCES = {
-    hn: {
-      label: 'Hacker News',
-      async load() {
-        const ids = (await (await fetch('https://hacker-news.firebaseio.com/v0/topstories.json')).json()).slice(0, NEWS_COUNT);
-        const items = await Promise.all(ids.map(id => fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`).then(r => r.json())));
-        return items.filter(i => i?.title).map(i => ({ title: i.title, url: i.url && isHttp(i.url) ? i.url : `https://news.ycombinator.com/item?id=${i.id}` }));
-      },
-    },
-    wiki: {
-      label: 'World (Wikipedia)',
-      async load() {
-        // The featured feed can be empty early in the day, so fall back to yesterday
-        for (const back of [0, 1]) {
-          const d = new Date(Date.now() - back * 864e5);
-          const p = n => String(n).padStart(2, '0');
-          const r = await fetch(`https://en.wikipedia.org/api/rest_v1/feed/featured/${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())}`);
-          if (!r.ok) continue;
-          const news = (await r.json()).news || [];
-          if (!news.length) continue;
-          return news.slice(0, NEWS_COUNT).map(n => ({
-            // story is HTML: read it as text, never insert it as markup
-            title: new DOMParser().parseFromString(n.story || '', 'text/html').body.textContent.replace(/\s+/g, ' ').trim(),
-            url: n.links?.[0]?.content_urls?.desktop?.page,
-          })).filter(n => n.title && isHttp(n.url || ''));
-        }
-        return [];
-      },
-    },
-  };
+  // ---------- news: RSS feeds via rss2json (a free third-party service that makes feeds readable from a local page) ----------
+  const RSS_API = 'https://api.rss2json.com/v1/api.json?rss_url=';
+  // Feed text may contain entities or tags; read it as plain text and never insert it as markup
+  const plain = s => new DOMParser().parseFromString(String(s || ''), 'text/html').body.textContent.replace(/\s+/g, ' ').trim();
 
   function news(root) {
-    const list = h('ul', { class: 'news-list' });
-    const status = h('div', { class: 'muted' });
-    let token = 0; // ignores a slow response after the user switched source
+    const open = new Set(config.feeds.slice(0, 1).map(f => f.url)); // first feed starts expanded
+    const cache = new Map(); // feed url -> { items } | { error } | { loading }
+    let editing = false;
 
-    const load = async () => {
-      const mine = ++token;
-      list.replaceChildren();
-      status.textContent = 'Loading\u2026';
+    const load = async feed => {
+      if (cache.has(feed.url)) return;
+      cache.set(feed.url, { loading: true });
       try {
-        const items = await NEWS_SOURCES[config.newsSource].load();
-        if (mine !== token) return;
-        status.textContent = items.length ? '' : 'No headlines available right now';
-        list.replaceChildren(...items.map(i => h('li', {}, h('a', { href: safeUrl(i.url), target: '_blank', rel: 'noopener' }, i.title))));
+        const data = await (await fetch(RSS_API + encodeURIComponent(feed.url))).json();
+        if (data.status !== 'ok') throw new Error(data.message || 'feed error');
+        const items = (data.items || []).map(i => ({ title: plain(i.title), url: i.link })).filter(i => i.title && isHttp(i.url || ''));
+        cache.set(feed.url, items.length ? { items } : { error: 'No headlines in this feed' });
       } catch {
-        if (mine === token) status.textContent = 'Could not load headlines (offline?)';
+        cache.set(feed.url, { error: 'Could not load this feed' });
       }
+      render();
     };
 
-    const pick = h('select', { title: 'News source', onchange: () => { config.newsSource = pick.value; save(); load(); } },
-      ...Object.entries(NEWS_SOURCES).map(([id, s]) => { const o = h('option', { value: id }, s.label); if (id === config.newsSource) o.selected = true; return o; }));
-    const refresh = h('button', { title: 'Refresh headlines', onclick: load }, '\u21BB');
-    root.replaceChildren(h('h2', {}, 'News', h('span', { class: 'btns' }, pick, refresh)), list, status);
-    load();
+    const feedEl = feed => {
+      const state = cache.get(feed.url);
+      const remove = h('button', { class: 'x', title: 'Remove feed', onclick: e => {
+        e.preventDefault(); e.stopPropagation();
+        config.feeds = config.feeds.filter(f => f !== feed); open.delete(feed.url); cache.delete(feed.url); save(); render();
+      } }, '\u2715');
+      let body;
+      if (state?.items) body = h('ul', { class: 'news-list' }, ...state.items.map(i => h('li', {}, h('a', { href: safeUrl(i.url), target: '_blank', rel: 'noopener' }, i.title))));
+      else body = h('div', { class: 'muted news-status' }, state?.error || 'Loading\u2026');
+      const d = h('details', { class: 'bm-folder news-feed' },
+        h('summary', {}, h('span', { class: 'bm-name', title: feed.url }, feed.title), editing ? remove : null), body);
+      d.open = open.has(feed.url);
+      d.addEventListener('toggle', () => {
+        if (d.open) { open.add(feed.url); load(feed); } else open.delete(feed.url);
+      });
+      return d;
+    };
+
+    const render = () => {
+      const name = h('input', { placeholder: 'Name' });
+      const url = h('input', { placeholder: 'Feed URL (https://\u2026)' });
+      const add = h('button', { onclick: () => {
+        if (!name.value.trim() || !isHttp(url.value.trim())) return;
+        config.feeds.push({ title: name.value.trim(), url: url.value.trim() });
+        open.add(url.value.trim()); save(); render();
+      } }, 'Add');
+      const edit = h('button', { title: 'Add or remove feeds', onclick: () => { editing = !editing; render(); } }, editing ? 'Done' : 'Edit');
+      const refresh = h('button', { title: 'Reload headlines', onclick: () => { cache.clear(); render(); } }, '\u21BB');
+
+      root.replaceChildren(
+        h('h2', {}, 'News', h('span', { class: 'btns' }, refresh, edit)),
+        config.feeds.length ? h('div', {}, ...config.feeds.map(feedEl)) : h('div', { class: 'muted' }, 'No feeds yet. Click Edit to add one.'),
+        editing ? h('div', { class: 'row' }, name, url, add) : null);
+      // Fetch only feeds that are expanded and not loaded yet
+      for (const f of config.feeds) if (open.has(f.url) && !cache.has(f.url)) load(f);
+    };
+    render();
   }
 
   // ---------- clock ----------
