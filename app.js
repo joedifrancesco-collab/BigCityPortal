@@ -24,6 +24,7 @@
     ],
     weather: { name: 'New York', lat: 40.71, lon: -74.01, unit: 'fahrenheit' },
     notes: '',
+    newsSource: 'hn',
     clock24: false,
     columns: [['notes', 'weather'], ['bookmarks'], ['calendar']],
   };
@@ -99,6 +100,7 @@
       c.weather = { name: w.name, lat: w.lat, lon: w.lon, unit: w.unit === 'celsius' ? 'celsius' : 'fahrenheit' };
     }
     if (str(raw.notes)) c.notes = raw.notes;
+    if (raw.newsSource === 'hn' || raw.newsSource === 'wiki') c.newsSource = raw.newsSource;
     if (typeof raw.clock24 === 'boolean') c.clock24 = raw.clock24;
     if (Array.isArray(raw.columns) && raw.columns.length) {
       c.columns = raw.columns.slice(0, COLUMNS).map(col => Array.isArray(col) ? col.filter(str) : []);
@@ -370,6 +372,65 @@
     root.replaceChildren(h('h2', {}, 'Notes'), area);
   }
 
+  // ---------- news (sources that allow browser requests, no API key) ----------
+  const NEWS_COUNT = 10;
+  const NEWS_SOURCES = {
+    hn: {
+      label: 'Hacker News',
+      async load() {
+        const ids = (await (await fetch('https://hacker-news.firebaseio.com/v0/topstories.json')).json()).slice(0, NEWS_COUNT);
+        const items = await Promise.all(ids.map(id => fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`).then(r => r.json())));
+        return items.filter(i => i?.title).map(i => ({ title: i.title, url: i.url && isHttp(i.url) ? i.url : `https://news.ycombinator.com/item?id=${i.id}` }));
+      },
+    },
+    wiki: {
+      label: 'World (Wikipedia)',
+      async load() {
+        // The featured feed can be empty early in the day, so fall back to yesterday
+        for (const back of [0, 1]) {
+          const d = new Date(Date.now() - back * 864e5);
+          const p = n => String(n).padStart(2, '0');
+          const r = await fetch(`https://en.wikipedia.org/api/rest_v1/feed/featured/${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())}`);
+          if (!r.ok) continue;
+          const news = (await r.json()).news || [];
+          if (!news.length) continue;
+          return news.slice(0, NEWS_COUNT).map(n => ({
+            // story is HTML: read it as text, never insert it as markup
+            title: new DOMParser().parseFromString(n.story || '', 'text/html').body.textContent.replace(/\s+/g, ' ').trim(),
+            url: n.links?.[0]?.content_urls?.desktop?.page,
+          })).filter(n => n.title && isHttp(n.url || ''));
+        }
+        return [];
+      },
+    },
+  };
+
+  function news(root) {
+    const list = h('ul', { class: 'news-list' });
+    const status = h('div', { class: 'muted' });
+    let token = 0; // ignores a slow response after the user switched source
+
+    const load = async () => {
+      const mine = ++token;
+      list.replaceChildren();
+      status.textContent = 'Loading\u2026';
+      try {
+        const items = await NEWS_SOURCES[config.newsSource].load();
+        if (mine !== token) return;
+        status.textContent = items.length ? '' : 'No headlines available right now';
+        list.replaceChildren(...items.map(i => h('li', {}, h('a', { href: safeUrl(i.url), target: '_blank', rel: 'noopener' }, i.title))));
+      } catch {
+        if (mine === token) status.textContent = 'Could not load headlines (offline?)';
+      }
+    };
+
+    const pick = h('select', { title: 'News source', onchange: () => { config.newsSource = pick.value; save(); load(); } },
+      ...Object.entries(NEWS_SOURCES).map(([id, s]) => { const o = h('option', { value: id }, s.label); if (id === config.newsSource) o.selected = true; return o; }));
+    const refresh = h('button', { title: 'Refresh headlines', onclick: load }, '\u21BB');
+    root.replaceChildren(h('h2', {}, 'News', h('span', { class: 'btns' }, pick, refresh)), list, status);
+    load();
+  }
+
   // ---------- clock ----------
   function clockWidget(root) {
     const time = h('div', { class: 'clock-time' });
@@ -417,7 +478,7 @@
   // ---------- widget columns with drag between and within columns ----------
   quicklaunch(document.getElementById('quicklaunch'));
 
-  const WIDGETS = { bookmarks, weather, notes, calendar, clock: clockWidget };
+  const WIDGETS = { bookmarks, weather, notes, calendar, clock: clockWidget, news };
   const container = document.getElementById('widgets');
   const cols = Array.from({ length: COLUMNS }, () => { const c = document.createElement('div'); c.className = 'col'; container.append(c); return c; });
   const placed = new Set();
