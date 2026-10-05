@@ -190,7 +190,7 @@
 
   // ---------- quick launch ----------
   function quicklaunch(root) {
-    let editing = false;
+    let editing = false, dragEl = null;
     const hostOf = u => { try { return new URL(u).hostname; } catch { return ''; } };
 
     const icon = item => {
@@ -205,7 +205,26 @@
       if (!editing) return el;
       el.style.pointerEvents = 'none';
       const remove = h('button', { class: 'ql-remove', title: 'Remove', onclick: () => { config.quicklaunch.splice(i, 1); save(); render(); } }, '✕');
-      return h('div', { class: 'ql-wrap' }, el, remove);
+      const wrap = h('div', { class: 'ql-wrap', title: 'Drag to reorder' }, el, remove);
+      wrap.draggable = true;
+      wrap.dataset.i = i;
+      wrap.addEventListener('dragstart', e => { dragEl = wrap; wrap.classList.add('ql-dragging'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', item.title); });
+      wrap.addEventListener('dragover', e => {
+        if (!dragEl || dragEl === wrap) return;
+        e.preventDefault();
+        const r = wrap.getBoundingClientRect();
+        const after = e.clientX > r.left + r.width / 2;
+        wrap.parentNode.insertBefore(dragEl, after ? wrap.nextSibling : wrap);
+      });
+      wrap.addEventListener('drop', e => e.preventDefault());
+      wrap.addEventListener('dragend', () => {
+        if (!dragEl) return;
+        const order = [...root.querySelectorAll('.ql-wrap')].map(w => Number(w.dataset.i));
+        dragEl = null;
+        if (order.some((v, k) => v !== k)) { config.quicklaunch = order.map(k => config.quicklaunch[k]); save(); }
+        render();
+      });
+      return wrap;
     };
 
     const render = () => {

@@ -99,3 +99,5 @@ a.title-link:hover { text-decoration:underline; }
 .calc-hist-item:hover { border-color:var(--border); }
 .calc-hist-item span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .calc-hist-item strong { max-width:55%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ql-wrap[draggable=true] { cursor:grab; }
+.ql-dragging { opacity:.4; }
