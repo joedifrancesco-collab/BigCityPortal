@@ -361,7 +361,8 @@
       } catch { status.textContent = 'Lookup failed'; }
     } }, 'Set');
     const unit = h('button', { onclick: () => { w.unit = w.unit === 'fahrenheit' ? 'celsius' : 'fahrenheit'; save(); refresh(); } }, '°F/°C');
-    root.replaceChildren(h('h2', {}, titleLink('Weather', 'https://weather.com'), unit), body, h('div', { class: 'row' }, place, change), status);
+    const reload = h('button', { title: 'Refresh weather', onclick: () => refresh() }, '\u21BB');
+    root.replaceChildren(h('h2', {}, titleLink('Weather', 'https://weather.com'), h('span', { class: 'btns' }, reload, unit)), body, h('div', { class: 'row' }, place, change), status);
 
     async function refresh() {
       try {
